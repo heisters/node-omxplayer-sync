@@ -1,0 +1,18 @@
+{
+  "name": "omxplayer-sync",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Ian Heisters",
+  "license": "MIT",
+  "dependencies": {
+    "dbus-native": "^0.2.0",
+    "merge": "^1.2.0",
+    "mpris": "0.0.2",
+    "omxdirector": "heisters/omxdirector",
+    "osc": "^1.1.3"
+  }
+}
