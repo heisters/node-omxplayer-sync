@@ -139,7 +139,7 @@ function pollStatus( sync ) {
 ////////////////////////////////////////////////////////////////////////////////
 // Cluster
 
-var waiting = false;
+var waiting = false, speed = 0;
 oscRouter.on( "/sync", function( args ) {
   var master = { seconds: args[0], time: args[1].native };
   if ( waiting || SYNC.invalid || SYNC.seconds < 0 || master.seconds < 0 ) return;
@@ -160,8 +160,10 @@ oscRouter.on( "/sync", function( args ) {
       console.log( "sync fine-tune", delta );
 
       if ( delta > 0 ) {
+        speed--;
         omx.slower();
       } else {
+        speed++;
         omx.faster()
       }
 
@@ -184,7 +186,13 @@ oscRouter.on( "/sync", function( args ) {
         setPosition( bus, masterPosition );
       }
     }
+
+  } else {
+    // ensure speed is reset
+    while( speed < 0 ) { speed++; omx.faster(); }
+    while( speed > 0 ) { speed--; omx.slower(); }
   }
+
 } );
 
 ////////////////////////////////////////////////////////////////////////////////
