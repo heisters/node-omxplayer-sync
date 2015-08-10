@@ -13,6 +13,9 @@
     "merge": "^1.2.0",
     "mpris": "0.0.2",
     "omxdirector": "heisters/omxdirector",
-    "osc": "^1.1.3"
+    "osc": "heisters/osc.js"
+  },
+  "devDependencies": {
+    "osc": "heisters/osc.js"
   }
 }
