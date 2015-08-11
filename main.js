@@ -73,98 +73,132 @@ var INTERFACE_SHORT_TO_FULL = {
   player: 'org.mpris.MediaPlayer2.Player'
 };
 
-var SYNC = { seconds: -1, time: -1, invalid: true };
-
-function invokeOMXDbus( bus, interfaceShort, options, cb ) {
-  var interface = INTERFACE_SHORT_TO_FULL[ interfaceShort ] || interfaceShort;
-  bus.invoke( merge( {
-    path: '/org/mpris/MediaPlayer2',
-    destination: 'org.mpris.MediaPlayer2.omxplayer',
-    interface: interface
-  }, options ), cb )
+function PlayerController( bus, clock ) {
+  this.bus = bus;
+  this.sync = { seconds: -1, time: -1, invalid: true };
+  this.speed = 0;
+  this.clock = clock;
 }
 
+Object.defineProperties( PlayerController.prototype, {
+  invokeOMXDbus: { value: function( interfaceShort, options, cb ) {
+    var interface = INTERFACE_SHORT_TO_FULL[ interfaceShort ] || interfaceShort;
+    this.bus.invoke( merge( {
+      path: '/org/mpris/MediaPlayer2',
+      destination: 'org.mpris.MediaPlayer2.omxplayer',
+      interface: interface
+    }, options ), cb )
+  } },
 
-function getDuration( bus, cb ) {
-  invokeOMXDbus( bus, 'properties', { member: 'Duration' }, cb );
-}
 
-function getPosition( bus, cb ) {
-  invokeOMXDbus( bus, 'properties', { member: 'Position' }, cb );
-}
+  getDuration: { value: function( cb ) {
+    this.invokeOMXDbus( 'properties', { member: 'Duration' }, cb );
+  } },
 
-function pause( bus, cb ) {
-  invokeOMXDbus( bus, 'player', { member: 'Pause' }, cb );
-}
+  getPosition: { value: function( cb ) {
+    this.invokeOMXDbus( 'properties', { member: 'Position' }, cb );
+  } },
 
-function play( bus, cb ) {
-  invokeOMXDbus( bus, 'player', { member: 'Play' }, cb );
-}
+  pause: { value: function( cb ) {
+    this.invokeOMXDbus( 'player', { member: 'Pause' }, cb );
+  } },
 
-function setPosition( bus, seconds ) {
-  invokeOMXDbus( bus, 'player', {
-    member: 'SetPosition',
-    signature: 'ox',
-    body: [ '/not/used', seconds * 1e6 ]
-  }, function( err, usPosition ) { // usPosition is just your arg, not the real new position
-    if ( err ) console.log( "Error setting position:", err );
-  } );
-}
+  play: { value: function( cb ) {
+    this.invokeOMXDbus( 'player', { member: 'Play' }, cb );
+  } },
 
-pollStatus( SYNC );
+  setPosition: { value: function( seconds ) {
+    this.invokeOMXDbus( 'player', {
+      member: 'SetPosition',
+      signature: 'ox',
+      body: [ '/not/used', seconds * 1e6 ]
+    }, function( err, usPosition ) { // usPosition is just your arg, not the real new position
+      if ( err ) console.log( "Error setting position:", err );
+    } );
+  } },
 
-// wrapping with duration is a workaround for position sometimes returning
-// weird values
-function pollStatus( sync ) {
-  getDuration( bus, function( err, usDuration ) {
-    if ( err ) {
-      setTimeout( function(){ pollStatus( sync ); }, 500 );
-      return;
-    }
+  // wrapping with duration is a workaround for position sometimes returning
+  // weird values
+  pollStatus: { value: function() {
+    this.getDuration( function( err, usDuration ) {
+      if ( err ) {
+        setTimeout( this.pollStatus.bind( this ), 500 );
+        return;
+      }
 
-    setInterval( function() {
-      var time = clock.now();
+      setInterval( function() {
+        var time = this.clock.now();
 
-      getPosition( bus, function( err, usPosition ) {
-        if ( usPosition > usDuration ) return;
-        sync.seconds = usPosition / 1e6;
-        sync.time = time;
-        sync.invalid = false;
-      } );
-    // don't try to hammer it at more than 2FPS or it's more error prone
-    }, 1e3 / FPS * 2 );
-  } );
-}
+        this.getPosition( function( err, usPosition ) {
+          if ( usPosition > usDuration ) return;
+          this.sync.seconds = usPosition / 1e6;
+          this.sync.time = time;
+          this.sync.invalid = false;
+        }.bind( this ) );
+      // don't try to hammer it at more than 2FPS or it's more error prone
+      }.bind( this ), 1e3 / FPS * 2 );
+    }.bind( this ) );
+  } },
+
+  faster: { value: function() {
+    this.speed++;
+    omx.faster();
+  } },
+
+  slower: { value: function() {
+    this.speed--;
+    omx.slower();
+  } },
+
+  isReadyForSync: { value: function() {
+    return ! this.sync.invalid && this.sync.seconds >= 0;
+  } },
+
+  invalid: {
+    get: function() { return this.sync.invalid; },
+    set: function( v ) { this.sync.invalid = v; }
+  },
+
+  seconds: {
+    get: function() { return this.sync.seconds; }
+  },
+
+  time: {
+    get: function() { return this.sync.time; }
+  }
+
+} );
+
+var controller = new PlayerController( bus, clock );
+controller.pollStatus();
 
 ////////////////////////////////////////////////////////////////////////////////
 // Cluster
 
-var waiting = false, speed = 0;
+var waiting = false;
 oscRouter.on( "/sync", function( args ) {
   var master = { seconds: args[0], time: args[1].native };
-  if ( waiting || SYNC.invalid || SYNC.seconds < 0 || master.seconds < 0 ) return;
+  if ( waiting || ! controller.isReadyForSync() || master.seconds < 0 ) return;
 
   if ( !clock.isSynchronized ) console.log( "synchronizing clock to master time" );
   clock.sync( master.time ); // doesn't compensate for latency...
 
   var now = clock.now();
   var masterPosition = master.seconds + ( now - master.time ) / 1e3;
-  var localPosition = SYNC.seconds + ( now - SYNC.time ) / 1e3;
+  var localPosition = controller.seconds + ( now - controller.time ) / 1e3;
   var delta = localPosition - masterPosition;
   var absDelta = Math.abs( delta );
 
   if ( absDelta > TOLERANCE ) {
-    SYNC.invalid = true;
+    controller.invalid = true;
 
     if ( absDelta < FINE_TUNE_TOLERANCE ) {
       console.log( "sync fine-tune", delta );
 
       if ( delta > 0 ) {
-        speed--;
-        omx.slower();
+        controller.slower();
       } else {
-        speed++;
-        omx.faster()
+        controller.faster();
       }
 
     } else {
@@ -172,25 +206,25 @@ oscRouter.on( "/sync", function( args ) {
 
       if ( delta > 0 ) {
         waiting = true;
-        pause( bus, function( err ) {
+        controller.pause( function( err ) {
           if ( !err ) {
             var waitFor = delta * 1e3 - (clock.now() - now);
             setTimeout( function() {
-              play( bus, function(){} );
+              controller.play( function(){} );
               waiting = false;
             }, waitFor );
           } else waiting = true;
         } );
 
       } else {
-        setPosition( bus, masterPosition );
+        controller.setPosition( masterPosition );
       }
     }
 
   } else {
     // ensure speed is reset
-    while( speed < 0 ) { speed++; omx.faster(); }
-    while( speed > 0 ) { speed--; omx.slower(); }
+    while( controller.speed < 0 ) { controller.faster(); }
+    while( controller.speed > 0 ) { controller.slower(); }
   }
 
 } );
