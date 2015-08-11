@@ -232,7 +232,7 @@ Object.defineProperties( PlayerController.prototype, {
               setTimeout( function() {
                 this.play( function(){} );
                 this.waiting = false;
-              }, waitFor );
+              }.bind( this ), waitFor );
             } else this.waiting = true;
           }.bind( this ) );
 
