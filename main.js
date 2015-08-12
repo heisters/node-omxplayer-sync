@@ -5,12 +5,14 @@ var omx = require('omxdirector')
   , merge = require('merge')
   , EventEmitter = require('events').EventEmitter
   , uuid = require('node-uuid')
+  , logger = require('./logger')
   , FPS = 25
   , TOLERANCE = 1 / FPS
   , FINE_TUNE_TOLERANCE = 10 * TOLERANCE
   , PORT = 5000
   , filename = '/home/pi/test.mp4'
 ;
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Synchronization
@@ -42,7 +44,7 @@ var oscPort = new osc.UDPPort({
 });
 oscPort.on( "bundle", handleBundle );
 oscPort.on( "message", handleMessage );
-oscPort.on( "ready", function() { console.log( "OSC sending and receiving on port " + PORT ); } );
+oscPort.on( "ready", function() { logger.info( "OSC sending and receiving on port " + PORT ); } );
 oscPort.open();
 
 
@@ -86,11 +88,11 @@ Object.defineProperties( Bus.prototype, {
       });
     } catch ( e ) {
       if ( e.code === "ENOENT" && tries >= 0 ) {
-        console.log( "Could not connect to dbus, trying again." );
+        logger.warn( "Could not connect to dbus, trying again." );
         setTimeout( function() { this.create( tries ) }.bind( this ), 500 );
         return;
       } else {
-        console.log( "Failed to connect to dbus." );
+        logger.fatal( "Failed to connect to dbus." );
         throw e;
       }
     }
@@ -150,7 +152,7 @@ Object.defineProperties( PlayerController.prototype, {
       signature: 'ox',
       body: [ '/not/used', seconds * 1e6 ]
     }, function( err, usPosition ) { // usPosition is just your arg, not the real new position
-      if ( err ) console.log( "Error setting position:", err );
+      if ( err ) logger.error( "Error setting position:", err );
     } );
   } },
 
@@ -210,7 +212,7 @@ Object.defineProperties( PlayerController.prototype, {
   synchronize: { value: function( seconds, time ) {
     if ( this.waiting || ! this.isReadyForSync() || seconds < 0 ) return;
 
-    if ( ! this.clock.isSynchronized ) console.log( "synchronizing clock to master time" );
+    if ( ! this.clock.isSynchronized ) logger.sync( "clock to master time" );
     this.clock.sync( time ); // doesn't compensate for latency...
 
     var now             = this.clock.now()
@@ -223,13 +225,13 @@ Object.defineProperties( PlayerController.prototype, {
       this.invalid = true;
 
       if ( absDelta < FINE_TUNE_TOLERANCE ) {
-        console.log( "sync fine-tune", delta );
+        logger.sync( "fine-tune", delta );
 
         if ( delta > 0 && this.speed >= 0 ) this.slower();
         else if ( this.speed <= 0 ) this.faster();
 
       } else {
-        console.log( "sync jump", delta );
+        logger.sync( "jump", delta );
 
         if ( delta > 0 ) {
           this.waiting = true;
@@ -348,12 +350,12 @@ node.heartbeat();
 
 node.on( "master", function() {
   controller.reset();
-  console.log( "imma master!" );
+  logger.info( "imma master!" );
 } );
-node.on( "slave", function() { console.log( "imma slave!" ); } );
+node.on( "slave", function() { logger.info( "imma slave!" ); } );
 
 node.on( "elect", function( id ) {
-  console.log( "send elect " + id );
+  logger.info( "send elect " + id );
   oscPort.send( {
     address: "/elect",
     args: [ { type: 's', value: id } ]
@@ -381,10 +383,10 @@ bus.on( "ready", function() {
   oscRouter.on( "/elect", function( args ) {
     var otherId = args[ 0 ];
     if ( node.id > otherId ) {
-      console.log( "got elect " + otherId + ", incrementing votes" );
+      logger.info( "got elect " + otherId + ", incrementing votes" );
       node.votes++;
     } else if ( node.id < otherId ) {
-      console.log( "got elect " + otherId + ", becoming slave" );
+      logger.info( "got elect " + otherId + ", becoming slave" );
       node.isSlave = true;
     } // else my own id
   } );
@@ -395,12 +397,12 @@ bus.on( "ready", function() {
 omx.enableNativeLoop();
 
 process.on("SIGINT", function() {
-  console.log("Quitting");
+  logger.info("Quitting");
   omx.stop();
 });
 
 omx.on('stop', function(){
-  console.log("Done.");
+  logger.info("Done.");
   process.exit();
 });
 

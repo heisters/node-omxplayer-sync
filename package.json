@@ -14,6 +14,7 @@
     "mpris": "0.0.2",
     "node-uuid": "^1.4.3",
     "omxdirector": "heisters/omxdirector",
-    "osc": "heisters/osc.js#specify-timetag-time"
+    "osc": "heisters/osc.js#specify-timetag-time",
+    "winston": "^1.0.1"
   }
 }
