@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+if [ "$1" == "" ] || [ "$2" == "" ]; then
+  echo "usage: $0 [duration in secs] [out file]"
+  exit 1
+fi
+
+ffmpeg -f lavfi -i testsrc=duration=$1:size=1920x1080:rate=25 -pix_fmt yuv420p -vcodec h264 "$2"
+
