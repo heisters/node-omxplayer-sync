@@ -8,7 +8,7 @@ var omx = require('omxdirector')
   , logger = require('./logger')
   , FPS = 25
   , TOLERANCE = 1 / FPS
-  , FINE_TUNE_TOLERANCE = 10 * TOLERANCE
+  , FINE_TUNE_TOLERANCE = 1
   // partially dependent on the seek resolution of your video, ie. how many
   // keyframes it has.
   , JUMP_TOLERANCE = 20
@@ -242,12 +242,13 @@ Object.defineProperties( PlayerController.prototype, {
     } );
 
 
+
     if ( absDelta < FINE_TUNE_TOLERANCE ) {
 
       logger.sync( "fine-tune", delta );
 
-      if ( delta > 0 )  this.slower();
-      else              this.faster();
+      if ( delta > 0 && this.speed >= 0 )  this.slower();
+      else if ( this.speed <= 0 )          this.faster();
 
 
     } else if ( absDelta >= JUMP_TOLERANCE || delta < 0 ) {
@@ -311,7 +312,7 @@ Object.defineProperties( Node.prototype, {
 
   stopElection: { value: function() {
     clearTimeout( this.__electTimeout );
-    clearTimeout( this.__waitForVotesTimeout );
+    clearTimeout( this.__votingTimeout );
   } },
 
   heartbeat: { value: function() {
