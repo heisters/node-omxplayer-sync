@@ -115,7 +115,7 @@ var INTERFACE_SHORT_TO_FULL = {
 
 function PlayerController( bus, clock ) {
   this.bus = bus;
-  this.sync = { seconds: -1, time: -1, invalid: true };
+  this.sync = { seconds: -1, time: -1 };
   this.speed = 0;
   this.clock = clock;
   this.waiting = false;
@@ -192,9 +192,9 @@ Object.defineProperties( PlayerController.prototype, {
 
           this.sync.seconds = usPosition / 1e6;
           this.sync.time = time;
-          this.sync.invalid = false;
+          this.sync.positionUpdated = true;
 
-          this.emit( "status", this.sync );
+          if ( this.valid ) this.emit( "status", this.sync );
         }.bind( this ) );
       // don't try to hammer it at more than 2FPS or it's more error prone
       }.bind( this ), 1e3 / FPS * 2 );
@@ -211,8 +211,13 @@ Object.defineProperties( PlayerController.prototype, {
     omx.slower();
   } },
 
+  valid: {
+    get: function() { return this.sync.positionUpdated; },
+    set: function( v ) { this.sync.positionUpdated = v }
+  },
+
   synchronize: { value: function( seconds, time ) {
-    if ( this.waiting || this.sync.invalid || this.sync.seconds < 0 || seconds < 0 ) return;
+    if ( this.waiting || ! this.valid || this.sync.seconds < 0 || seconds < 0 ) return;
 
     if ( ! this.clock.isSynchronized ) logger.sync( "clock to master time" );
     this.clock.sync( time ); // doesn't compensate for latency...
@@ -225,7 +230,7 @@ Object.defineProperties( PlayerController.prototype, {
       , absDelta        = Math.abs( delta );
 
 
-    this.sync.invalid = true;
+    this.valid = false;
 
     if ( absDelta < TOLERANCE ) {
       this.reset();
@@ -247,8 +252,8 @@ Object.defineProperties( PlayerController.prototype, {
 
       logger.sync( "fine-tune", delta );
 
-      if ( delta > 0 && this.speed >= 0 )  this.slower();
-      else if ( this.speed <= 0 )          this.faster();
+      if      ( delta > 0 && this.speed >= 0 ) this.slower()
+      else if ( delta < 0 && this.speed <= 0 ) this.faster();
 
 
     } else if ( absDelta >= JUMP_TOLERANCE || delta < 0 ) {
