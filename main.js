@@ -9,10 +9,14 @@ var omx = require('omxdirector')
   , FPS = 25
   , TOLERANCE = 1 / FPS
   , FINE_TUNE_TOLERANCE = 10 * TOLERANCE
+  // partially dependent on the seek resolution of your video, ie. how many
+  // keyframes it has.
+  , JUMP_TOLERANCE = 20
   , PORT = 5000
   , filename = '/home/pi/test.mp4'
 ;
 
+//logger.level = 'debug';
 
 ////////////////////////////////////////////////////////////////////////////////
 // Synchronization
@@ -142,6 +146,21 @@ Object.defineProperties( PlayerController.prototype, {
     this.invokeOMXDbus( 'player', { member: 'Pause' }, cb );
   } },
 
+  pauseFor: { value: function( cb, ms, then ) {
+    this.pause( function( err ) {
+      if ( err ) {
+        cb( err );
+
+      } else {
+        var waitFor = ms - ( this.clock.now() - then );
+        setTimeout( function() {
+          this.play( function() {} );
+          cb();
+        }.bind( this ), waitFor );
+      }
+    }.bind( this ) );
+  } },
+
   play: { value: function( cb ) {
     this.invokeOMXDbus( 'player', { member: 'Play' }, cb );
   } },
@@ -169,7 +188,7 @@ Object.defineProperties( PlayerController.prototype, {
         var time = this.clock.now();
 
         this.getPosition( function( err, usPosition ) {
-          if ( usPosition > usDuration ) return;
+          if ( err || usPosition > usDuration ) return;
 
           this.sync.seconds = usPosition / 1e6;
           this.sync.time = time;
@@ -192,66 +211,59 @@ Object.defineProperties( PlayerController.prototype, {
     omx.slower();
   } },
 
-  isReadyForSync: { value: function() {
-    return ! this.sync.invalid && this.sync.seconds >= 0;
-  } },
-
-  invalid: {
-    get: function() { return this.sync.invalid; },
-    set: function( v ) { this.sync.invalid = v; }
-  },
-
-  seconds: {
-    get: function() { return this.sync.seconds; }
-  },
-
-  time: {
-    get: function() { return this.sync.time; }
-  },
-
   synchronize: { value: function( seconds, time ) {
-    if ( this.waiting || ! this.isReadyForSync() || seconds < 0 ) return;
+    if ( this.waiting || this.sync.invalid || this.sync.seconds < 0 || seconds < 0 ) return;
 
     if ( ! this.clock.isSynchronized ) logger.sync( "clock to master time" );
     this.clock.sync( time ); // doesn't compensate for latency...
 
+
     var now             = this.clock.now()
       , masterPosition  = seconds + ( now - time ) / 1e3
-      , localPosition   = this.seconds + ( now - this.time ) / 1e3
+      , localPosition   = this.sync.seconds + ( now - this.sync.time ) / 1e3
       , delta           = localPosition - masterPosition
       , absDelta        = Math.abs( delta );
 
-    if ( absDelta > TOLERANCE ) {
-      this.invalid = true;
 
-      if ( absDelta < FINE_TUNE_TOLERANCE ) {
-        logger.sync( "fine-tune", delta );
+    this.sync.invalid = true;
 
-        if ( delta > 0 && this.speed >= 0 ) this.slower();
-        else if ( this.speed <= 0 ) this.faster();
+    if ( absDelta < TOLERANCE ) {
+      this.reset();
+      return;
+    }
 
-      } else {
-        logger.sync( "jump", delta );
 
-        if ( delta > 0 ) {
-          this.waiting = true;
-          this.pause( function( err ) {
-            if ( !err ) {
-              var waitFor = delta * 1e3 - ( this.clock.now() - now );
-              setTimeout( function() {
-                this.play( function(){} );
-                this.waiting = false;
-              }.bind( this ), waitFor );
-            } else this.waiting = true;
-          }.bind( this ) );
+    logger.debug( "synchronizing", {
+      now: now,
+      masterSeconds: seconds, masterTime: time,
+      localSeconds: this.sync.seconds, localTime: this.sync.time,
+      masterPosition: masterPosition, localPosition: localPosition,
+      delta: delta
+    } );
 
-        } else {
-          this.setPosition( masterPosition );
-        }
-      }
+
+    if ( absDelta < FINE_TUNE_TOLERANCE ) {
+
+      logger.sync( "fine-tune", delta );
+
+      if ( delta > 0 )  this.slower();
+      else              this.faster();
+
+
+    } else if ( absDelta >= JUMP_TOLERANCE || delta < 0 ) {
+
+      logger.sync( "jump", delta );
+
+      this.setPosition( masterPosition );
+
 
     } else {
-      this.reset();
+
+      logger.sync( "wait", delta );
+
+      this.waiting = true;
+      this.pauseFor( function() { this.waiting = false; }.bind( this ), delta * 1e3, now );
+
     }
   } },
 
@@ -332,6 +344,10 @@ Object.defineProperties( Node.prototype, {
     }
   },
 
+  isIndeterminate: {
+    get: function() { return this.state === NODE_STATE.indeterminate; }
+  },
+
   isSlave: {
     get: function() { return this.state === NODE_STATE.slave; },
     set: function( v ) {
@@ -377,7 +393,8 @@ controller.on( "status", function( status ) {
 bus.on( "ready", function() {
   oscRouter.on( "/sync", function( args ) {
     node.heartbeat();
-    controller.synchronize( args[ 0 ], args[ 1 ].native );
+    if ( node.isIndeterminate ) node.isSlave = true;
+    if ( node.isSlave ) controller.synchronize( args[ 0 ], args[ 1 ].native );
   } );
 
   oscRouter.on( "/elect", function( args ) {
