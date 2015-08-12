@@ -6,12 +6,14 @@ var omx = require('omxdirector')
   , EventEmitter = require('events').EventEmitter
   , uuid = require('node-uuid')
   , logger = require('./logger')
+  , Queue = require('./queue')
   , FPS = 25
-  , TOLERANCE = 1 / FPS
-  , FINE_TUNE_TOLERANCE = 1
+  , TOLERANCE_SECS = 1 / FPS
+  , FINE_TUNE_TOLERANCE_SECS = 1
   // partially dependent on the seek resolution of your video, ie. how many
   // keyframes it has.
-  , JUMP_TOLERANCE = 20
+  , JUMP_TOLERANCE_SECS = 20
+  , SMOOTHING_WINDOW_MS = 1e3 / FPS * 10
   , PORT = 5000
   , filename = '/home/pi/test.mp4'
 ;
@@ -116,6 +118,7 @@ var INTERFACE_SHORT_TO_FULL = {
 function PlayerController( bus, clock ) {
   this.bus = bus;
   this.sync = { seconds: -1, time: -1 };
+  this.master = { values: new Queue(), sums: { time: 0, seconds: 0 }, avgs: { time: 0, seconds: 0 } };
   this.speed = 0;
   this.clock = clock;
   this.waiting = false;
@@ -195,7 +198,7 @@ Object.defineProperties( PlayerController.prototype, {
           this.sync.time = time;
           this.sync.positionUpdated = true;
 
-          if ( this.valid ) this.emit( "status", this.sync );
+          if ( this.localValid ) this.emit( "status", this.sync );
         }.bind( this ) );
       // don't try to hammer it at more than 2FPS or it's more error prone
       }.bind( this ), 1e3 / FPS * 2 );
@@ -212,39 +215,60 @@ Object.defineProperties( PlayerController.prototype, {
     omx.slower();
   } },
 
-  valid: {
+  localValid: {
     get: function() { return this.sync.positionUpdated; },
-    set: function( v ) { this.sync.positionUpdated = v }
+    set: function( v ) { return this.sync.positionUpdated = v; }
+  },
+
+  masterValid: {
+    get: function() { return this.master.updated; },
+    set: function( v ) { return this.master.updated = v; }
   },
 
   synchronize: { value: function( seconds, time ) {
     if ( ! this.clock.isSynchronized ) logger.sync( "clock to master time" );
     this.clock.sync( time ); // doesn't compensate for latency...
 
-    this.master = { seconds: seconds, time: time };
+
+    // Calculate averages
+
+    this.master.updated = true;
+    this.master.values.enqueue( { seconds: seconds, time: time } );
+    this.master.sums.time += time;
+    this.master.sums.seconds += seconds;
+
+    while ( this.master.values.length && this.master.values.peek().time < ( time - SMOOTHING_WINDOW_MS ) ) {
+      var v = this.master.values.dequeue();
+      this.master.sums.time -= v.time;
+      this.master.sums.seconds -= v.seconds;
+    }
+
+    var l = this.master.values.getLength();
+    this.master.avgs.time = this.master.sums.time / l;
+    this.master.avgs.seconds = this.master.sums.seconds / l;
   } },
 
   seekToMaster: { value: function() {
-    if ( this.waiting || ! this.valid || ! this.master || this.sync.seconds < 0 || this.master.seconds < 0 ) return;
+    if ( this.waiting || ! this.localValid || ! this.masterValid ) return;
 
     var now             = this.clock.now()
-      , masterPosition  = this.master.seconds + ( now - this.master.time ) / 1e3
+      , masterPosition  = this.master.avgs.seconds + ( now - this.master.avgs.time ) / 1e3
       , localPosition   = this.sync.seconds + ( now - this.sync.time ) / 1e3
       , delta           = localPosition - masterPosition
       , absDelta        = Math.abs( delta );
 
 
-    this.valid = false;
-    this.master = undefined;
+    this.localValid = this.masterValid = false;
 
-    if ( absDelta < TOLERANCE ) {
+
+    if ( absDelta < TOLERANCE_SECS ) {
       this.reset();
       return;
     }
 
 
 
-    if ( absDelta < FINE_TUNE_TOLERANCE ) {
+    if ( absDelta < FINE_TUNE_TOLERANCE_SECS ) {
 
       logger.sync( "fine-tune", delta );
 
@@ -252,7 +276,7 @@ Object.defineProperties( PlayerController.prototype, {
       else if ( delta < 0 && this.speed <= 0 ) this.faster();
 
 
-    } else if ( absDelta >= JUMP_TOLERANCE || delta < 0 ) {
+    } else if ( absDelta >= JUMP_TOLERANCE_SECS || delta < 0 ) {
 
       logger.sync( "jump", delta );
 
