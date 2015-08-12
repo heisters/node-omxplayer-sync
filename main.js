@@ -4,6 +4,7 @@ var omx = require('omxdirector')
   , fs = require('fs')
   , merge = require('merge')
   , EventEmitter = require('events').EventEmitter
+  , uuid = require('node-uuid')
   , FPS = 25
   , TOLERANCE = 1 / FPS
   , FINE_TUNE_TOLERANCE = 10 * TOLERANCE
@@ -36,7 +37,8 @@ var oscPort = new osc.UDPPort({
   localAddress: '0.0.0.0',
   localPort: PORT,
   remoteAddress: '192.168.1.255',
-  remotePort: PORT
+  remotePort: PORT,
+  broadcast: true
 });
 oscPort.on( "bundle", handleBundle );
 oscPort.on( "message", handleMessage );
@@ -67,7 +69,7 @@ function handlePacket (packet) {
 function Bus() {
 }
 
-Bus.prototype = EventEmitter.prototype;
+Bus.prototype = new EventEmitter();
 
 Object.defineProperties( Bus.prototype, {
   invoke: { value: function() {
@@ -112,6 +114,8 @@ function PlayerController( bus, clock ) {
   this.clock = clock;
   this.waiting = false;
 }
+
+PlayerController.prototype = new EventEmitter();
 
 Object.defineProperties( PlayerController.prototype, {
   invokeOMXDbus: { value: function( interfaceShort, options, cb ) {
@@ -164,9 +168,12 @@ Object.defineProperties( PlayerController.prototype, {
 
         this.getPosition( function( err, usPosition ) {
           if ( usPosition > usDuration ) return;
+
           this.sync.seconds = usPosition / 1e6;
           this.sync.time = time;
           this.sync.invalid = false;
+
+          this.emit( "status", this.sync );
         }.bind( this ) );
       // don't try to hammer it at more than 2FPS or it's more error prone
       }.bind( this ), 1e3 / FPS * 2 );
@@ -218,8 +225,8 @@ Object.defineProperties( PlayerController.prototype, {
       if ( absDelta < FINE_TUNE_TOLERANCE ) {
         console.log( "sync fine-tune", delta );
 
-        if ( delta > 0 ) this.slower();
-        else this.faster();
+        if ( delta > 0 && this.speed >= 0 ) this.slower();
+        else if ( this.speed <= 0 ) this.faster();
 
       } else {
         console.log( "sync jump", delta );
@@ -242,10 +249,14 @@ Object.defineProperties( PlayerController.prototype, {
       }
 
     } else {
-      // ensure speed is reset
-      while( this.speed < 0 ) this.faster();
-      while( this.speed > 0 ) this.slower();
+      this.reset();
     }
+  } },
+
+  reset: { value: function() {
+    this.play();
+    while( this.speed < 0 ) this.faster();
+    while( this.speed > 0 ) this.slower();
   } }
 
 } );
@@ -257,11 +268,125 @@ bus.on( "ready", function( dbus ) {
 } );
 
 ////////////////////////////////////////////////////////////////////////////////
-// Cluster
+// Node
+
+var NODE_STATE = { master: 0, slave: 1, indeterminate: 2 };
+
+function Node( options ) {
+  this.heartbeatTimeout = options.heartbeatTimeout || 1000;
+  this.electTimeout = options.electTimeout || 100;
+  this.votingTimeout = options.votingTimeout || 750;
+  this.state = NODE_STATE.indeterminate;
+  this.id = uuid.v4();
+  this.on( "heartbeat lost", this.elect.bind( this ) );
+}
+
+Node.prototype = new EventEmitter();
+
+Object.defineProperties( Node.prototype, {
+  elect: { value: function( cycle ) {
+    cycle = cycle === undefined ? 0 : cycle;
+    if ( cycle === 0 ) this.votes = 0;
+    this.state = NODE_STATE.indeterminate;
+
+    this.emit( "elect", this.id );
+    this.__electTimeout = setTimeout( function() {
+      this.elect( cycle + 1 );
+    }.bind( this ), this.electTimeout );
+  } },
+
+  stopElection: { value: function() {
+    clearTimeout( this.__electTimeout );
+    clearTimeout( this.__waitForVotesTimeout );
+  } },
+
+  heartbeat: { value: function() {
+    if ( this.__heartbeatTimeout ) clearTimeout( this.__heartbeatTimeout );
+
+    this.__heartbeatTimeout = setTimeout( function(){
+      this.emit( "heartbeat lost" )
+    }.bind( this ), this.heartbeatTimeout );
+
+    this.emit( "heartbeat" );
+  } },
+
+  votes: {
+    get: function() { return this._votes; },
+    set: function( v ) {
+      this._votes = v;
+      if ( this.__votingTimeout ) clearTimeout( this.__votingTimeout );
+      this.__votingTimeout = setTimeout( function() {
+        this.isMaster = true;
+      }.bind( this ), this.votingTimeout );
+    }
+  },
+
+  isMaster: {
+    get: function() { return this.state === NODE_STATE.master; },
+    set: function( v ) {
+      this.state = v ? NODE_STATE.master : NODE_STATE.indeterminate;
+      this.stopElection();
+      this.emit( "master" );
+    }
+  },
+
+  isSlave: {
+    get: function() { return this.state === NODE_STATE.slave; },
+    set: function( v ) {
+      this.state = v ? NODE_STATE.slave : NODE_STATE.indeterminate;
+      this.stopElection();
+      this.emit( "slave" );
+    }
+  }
+} );
+
+var node = new Node( { heartbeatTimeout: 1000 } );
+node.heartbeat();
+
+////////////////////////////////////////////////////////////////////////////////
+// Node Transport
+
+node.on( "master", function() {
+  controller.reset();
+  console.log( "imma master!" );
+} );
+node.on( "slave", function() { console.log( "imma slave!" ); } );
+
+node.on( "elect", function( id ) {
+  console.log( "send elect " + id );
+  oscPort.send( {
+    address: "/elect",
+    args: [ { type: 's', value: id } ]
+  } );
+} );
+
+controller.on( "status", function( status ) {
+  if ( ! node.isMaster ) return;
+
+  var elapsed = status.seconds
+    , time = osc.timeTag( 0, status.time );
+
+  oscPort.send( {
+    address: "/sync",
+    args: [ { type: 'f', value: elapsed }, { type: 't', value: time } ]
+  } );
+} );
 
 bus.on( "ready", function() {
   oscRouter.on( "/sync", function( args ) {
+    node.heartbeat();
     controller.synchronize( args[ 0 ], args[ 1 ].native );
+  } );
+
+  oscRouter.on( "/elect", function( args ) {
+    var otherId = args[ 0 ];
+    if ( node.id > otherId ) {
+      console.log( "got elect " + otherId + ", incrementing votes" );
+      node.votes++;
+    } else if ( node.id < otherId ) {
+      console.log( "got elect " + otherId + ", becoming slave" );
+      node.isSlave = true;
+    } // else my own id
   } );
 } );
 

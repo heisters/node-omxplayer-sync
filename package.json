@@ -12,7 +12,8 @@
     "dbus-native": "^0.2.0",
     "merge": "^1.2.0",
     "mpris": "0.0.2",
+    "node-uuid": "^1.4.3",
     "omxdirector": "heisters/omxdirector",
-    "osc": "heisters/osc.js"
+    "osc": "heisters/osc.js#specify-timetag-time"
   }
 }
