@@ -119,6 +119,7 @@ function PlayerController( bus, clock ) {
   this.speed = 0;
   this.clock = clock;
   this.waiting = false;
+  this.on( "status", this.seekToMaster.bind( this ) );
 }
 
 PlayerController.prototype = new EventEmitter();
@@ -217,34 +218,29 @@ Object.defineProperties( PlayerController.prototype, {
   },
 
   synchronize: { value: function( seconds, time ) {
-    if ( this.waiting || ! this.valid || this.sync.seconds < 0 || seconds < 0 ) return;
-
     if ( ! this.clock.isSynchronized ) logger.sync( "clock to master time" );
     this.clock.sync( time ); // doesn't compensate for latency...
 
+    this.master = { seconds: seconds, time: time };
+  } },
+
+  seekToMaster: { value: function() {
+    if ( this.waiting || ! this.valid || ! this.master || this.sync.seconds < 0 || this.master.seconds < 0 ) return;
 
     var now             = this.clock.now()
-      , masterPosition  = seconds + ( now - time ) / 1e3
+      , masterPosition  = this.master.seconds + ( now - this.master.time ) / 1e3
       , localPosition   = this.sync.seconds + ( now - this.sync.time ) / 1e3
       , delta           = localPosition - masterPosition
       , absDelta        = Math.abs( delta );
 
 
     this.valid = false;
+    this.master = undefined;
 
     if ( absDelta < TOLERANCE ) {
       this.reset();
       return;
     }
-
-
-    logger.debug( "synchronizing", {
-      now: now,
-      masterSeconds: seconds, masterTime: time,
-      localSeconds: this.sync.seconds, localTime: this.sync.time,
-      masterPosition: masterPosition, localPosition: localPosition,
-      delta: delta
-    } );
 
 
 
