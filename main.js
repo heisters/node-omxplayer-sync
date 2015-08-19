@@ -453,7 +453,8 @@ omx.on('stop', function(){
 
 
 var args = [];
-//args.push("--blank");
+args.push("--blank");
+if ( ! process.env.DEBUG ) args.push("--no-osd");
 //args = args.concat(["--win", "0,0,960,540"]);
 omx.play( filename, {loop: true, args: args} );
 
