@@ -7,18 +7,11 @@ var omx = require('omxdirector')
   , uuid = require('node-uuid')
   , logger = require('./logger')
   , Queue = require('./queue')
-  , FPS = 25
-  , TOLERANCE_SECS = 1 / FPS
-  , FINE_TUNE_TOLERANCE_SECS = 1
-  // partially dependent on the seek resolution of your video, ie. how many
-  // keyframes it has.
-  , JUMP_TOLERANCE_SECS = 20
-  , SMOOTHING_WINDOW_MS = 1e3 / FPS * 10
-  , PORT = 5000
-  , filename = '/home/pi/test.mp4'
+  , config = require('./config')
+  , DEBUG = !!(config.debug || process.env.DEBUG)
 ;
 
-//logger.level = 'debug';
+if ( DEBUG ) logger.level = 'debug';
 
 ////////////////////////////////////////////////////////////////////////////////
 // Synchronization
@@ -43,14 +36,14 @@ var clock = new Clock();
 var oscRouter = new EventEmitter();
 var oscPort = new osc.UDPPort({
   localAddress: '0.0.0.0',
-  localPort: PORT,
+  localPort: config.port,
   remoteAddress: '192.168.1.255',
-  remotePort: PORT,
+  remotePort: config.port,
   broadcast: true
 });
 oscPort.on( "bundle", handleBundle );
 oscPort.on( "message", handleMessage );
-oscPort.on( "ready", function() { logger.info( "OSC sending and receiving on port " + PORT ); } );
+oscPort.on( "ready", function() { logger.info( "OSC sending and receiving on port " + config.port ); } );
 oscPort.open();
 
 
@@ -201,7 +194,7 @@ Object.defineProperties( PlayerController.prototype, {
           if ( this.localValid ) this.emit( "status", this.sync );
         }.bind( this ) );
       // don't try to hammer it at more than 2FPS or it's more error prone
-      }.bind( this ), 1e3 / FPS * 2 );
+      }.bind( this ), 1e3 / config.fps * 2 );
     }.bind( this ) );
   } },
 
@@ -237,7 +230,7 @@ Object.defineProperties( PlayerController.prototype, {
     this.master.sums.time += time;
     this.master.sums.seconds += seconds;
 
-    while ( this.master.values.length && this.master.values.peek().time < ( time - SMOOTHING_WINDOW_MS ) ) {
+    while ( this.master.values.length && this.master.values.peek().time < ( time - config.smoothingWindowMs ) ) {
       var v = this.master.values.dequeue();
       this.master.sums.time -= v.time;
       this.master.sums.seconds -= v.seconds;
@@ -261,14 +254,14 @@ Object.defineProperties( PlayerController.prototype, {
     this.localValid = this.masterValid = false;
 
 
-    if ( absDelta < TOLERANCE_SECS ) {
+    if ( absDelta < config.toleranceSecs ) {
       this.reset();
       return;
     }
 
 
 
-    if ( absDelta < FINE_TUNE_TOLERANCE_SECS ) {
+    if ( absDelta < config.fineTuneToleranceSecs ) {
 
       logger.sync( "fine-tune", delta );
 
@@ -276,7 +269,7 @@ Object.defineProperties( PlayerController.prototype, {
       else if ( delta < 0 && this.speed <= 0 ) this.faster();
 
 
-    } else if ( absDelta >= JUMP_TOLERANCE_SECS || delta < 0 ) {
+    } else if ( absDelta >= config.jumpToleranceSecs || delta < 0 ) {
 
       logger.sync( "jump", delta );
 
@@ -454,8 +447,8 @@ omx.on('stop', function(){
 
 var args = [];
 args.push("--blank");
-if ( ! process.env.DEBUG ) args.push("--no-osd");
+if ( ! DEBUG ) args.push("--no-osd");
 //args = args.concat(["--win", "0,0,960,540"]);
-omx.play( filename, {loop: true, args: args} );
+omx.play( config.filename, {loop: true, args: args} );
 
 bus.create();
