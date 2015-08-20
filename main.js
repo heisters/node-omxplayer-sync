@@ -10,7 +10,8 @@ var omx = require('omxdirector')
   , DEBUG = !!(config.debug || process.env.DEBUG)
 ;
 
-if ( DEBUG ) logger.level = 'debug';
+if ( DEBUG ) { logger.level = 'debug'; }
+else         { logger.level = 'info'; logger.transports.console.level = 'warn'; }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Synchronization
