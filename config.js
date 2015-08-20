@@ -6,7 +6,7 @@ module.exports = {
   // partially dependent on the seek resolution of your video, ie. how many
   // keyframes it has.
   jumpToleranceSecs: 10,
-  smoothingWindowMs: 1e3 / FPS * 10,
+  smoothingWindowMs: 1e3 / FPS * 20,
   loopDetectionMarginSecs: 2,
   port: 5000,
   filename: '/home/pi/video.mov',
