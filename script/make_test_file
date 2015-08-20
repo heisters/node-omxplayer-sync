@@ -5,5 +5,5 @@ if [ "$1" == "" ] || [ "$2" == "" ]; then
   exit 1
 fi
 
-ffmpeg -f lavfi -i testsrc=duration=$1:size=1920x1080:rate=25 -pix_fmt yuv420p -vcodec h264 "$2"
+ffmpeg -f lavfi -i testsrc=duration=$1:size=1920x1080:rate=29.97 -g 2 -pix_fmt yuv420p -vcodec h264 "$2"
 
