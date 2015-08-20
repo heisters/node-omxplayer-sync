@@ -9,6 +9,6 @@ module.exports = {
   smoothingWindowMs: 1e3 / FPS * 10,
   loopDetectionMarginSecs: 2,
   port: 5000,
-  filename: '/home/pi/test_very_short.mp4',
+  filename: '/home/pi/video.mov',
   debug: false
 }
