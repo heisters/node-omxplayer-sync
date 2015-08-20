@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+if [ "$1" == "" ]; then
+  echo "usage: $0 [video file]"
+fi
+ffprobe -of compact -show_packets -select_streams v "$1" | grep K$ | awk 'BEGIN{FS="|";last=0}{split($5,a,"="); print a[2]-last; last=a[2]}'
