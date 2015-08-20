@@ -2,7 +2,6 @@ var omx = require('omxdirector')
   , osc = require('osc')
   , dbus = require('dbus-native')
   , fs = require('fs')
-  , merge = require('merge')
   , EventEmitter = require('events').EventEmitter
   , uuid = require('node-uuid')
   , logger = require('./src/logger')
@@ -104,7 +103,7 @@ Object.defineProperties( Bus.prototype, {
 var bus = new Bus();
 
 
-var controller = new PlayerController( bus, clock, logger, config );
+var controller = new PlayerController( bus, clock, omx, logger, config );
 
 bus.on( "ready", function( dbus ) {
   controller.pollStatus();
@@ -195,6 +194,7 @@ node.heartbeat();
 
 node.on( "master", function() {
   controller.reset();
+  controller.play();
   logger.info( "imma master!" );
 } );
 node.on( "slave", function() { logger.info( "imma slave!" ); } );

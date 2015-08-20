@@ -1,4 +1,5 @@
 var Queue = require('./queue')
+  , merge = require('merge')
   , EventEmitter = require('events').EventEmitter
 ;
 
@@ -7,8 +8,9 @@ var INTERFACE_SHORT_TO_FULL = {
   player: 'org.mpris.MediaPlayer2.Player'
 };
 
-function PlayerController( bus, clock, logger, config ) {
+function PlayerController( bus, clock, omx, logger, config ) {
   this.bus = bus;
+  this.omx = omx;
   this.logger = logger;
   this.config = config;
   this.sync = { seconds: -1, time: -1 };
@@ -88,30 +90,35 @@ Object.defineProperties( PlayerController.prototype, {
         this.getPosition( function( err, usPosition ) {
           if ( err || usPosition > usDuration ) return;
 
-          this.sync.duration = usDuration / 1e6;
-          this.sync.seconds = usPosition / 1e6;
-          this.sync.time = time;
-          this.sync.positionUpdated = true;
+          this.updateStatus( usDuration / 1e6, usPosition / 1e6, time );
 
-          if ( this.localValid ) this.emit( "status", this.sync );
         }.bind( this ) );
       // don't try to hammer it at more than 2FPS or it's more error prone
       }.bind( this ), 1e3 / this.config.fps * 2 );
     }.bind( this ) );
   } },
 
+  updateStatus: { value: function( durationSecs, positionSecs, time ) {
+    this.sync.duration = durationSecs;
+    this.sync.seconds = positionSecs;
+    this.sync.time = time;
+    this.sync.positionUpdated = true;
+
+    if ( this.localValid ) this.emit( "status", this.sync );
+  } },
+
   faster: { value: function() {
     if ( this.speed >= 1 ) return; // greater than once is not supported
     this.speed++;
 
-    omx.faster();
+    this.omx.faster();
   } },
 
   slower: { value: function() {
     if ( this.speed <= -3 ) return;
     this.speed--;
 
-    omx.slower();
+    this.omx.slower();
   } },
 
   localValid: {
@@ -172,13 +179,11 @@ Object.defineProperties( PlayerController.prototype, {
 
 
     if ( absDelta < this.config.toleranceSecs || absDelta > ( duration - this.config.loopDetectionMarginSecs ) ) {
+
       this.reset();
-      return;
-    }
 
 
-
-    if ( absDelta < this.config.fineTuneToleranceSecs ) {
+    } else if ( absDelta < this.config.fineTuneToleranceSecs ) {
 
       this.logger.sync( "fine-tune", delta.toFixed(2) );
 
@@ -204,7 +209,6 @@ Object.defineProperties( PlayerController.prototype, {
   } },
 
   reset: { value: function() {
-    this.play();
     while( this.speed < 0 ) this.faster();
     while( this.speed > 0 ) this.slower();
   } }
