@@ -16,5 +16,9 @@
     "omxdirector": "heisters/omxdirector",
     "osc": "heisters/osc.js#specify-timetag-time",
     "winston": "^1.0.1"
+  },
+  "devDependencies": {
+    "mocha": "^2.2.5",
+    "sinon": "^1.16.0"
   }
 }

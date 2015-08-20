@@ -25,6 +25,11 @@ var Queue = function(){
     return (queue.length - offset);
   }
 
+  // Returns the underlying array.
+  this.getItems = function() {
+    return queue.slice(offset);
+  }
+
   // Returns true if the queue is empty, and false otherwise.
   this.isEmpty = function(){
     return (queue.length == 0);
