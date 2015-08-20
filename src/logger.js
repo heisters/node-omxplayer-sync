@@ -16,8 +16,9 @@ module.exports = new (winston.Logger)( {
 
     new(winston.transports.DailyRotateFile)( {
       filename: 'video-player',
+      datePattern: '-yyyy-MM-dd.log',
       colorize: true,
-      dirname: __dirname,
+      dirname: __dirname + "/../",
       timestamp: timestamp,
       maxFiles: 5
     } )
