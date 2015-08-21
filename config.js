@@ -1,14 +1,19 @@
-var FPS = 25;
-module.exports = {
+var FPS = 25
+  , merge = require('merge')
+  , overrides = {}
+;
+try { overrides = require('./config.local') } catch (e) { }
+
+module.exports = merge( {
   fps: FPS,
   toleranceSecs: 1 / FPS,
   fineTuneToleranceSecs: 1,
   // partially dependent on the seek resolution of your video, ie. how many
   // keyframes it has.
   jumpToleranceSecs: 10,
-  smoothingWindowMs: 1e3 / FPS * 20,
+  smoothingWindowMs: 1e3 / FPS * 10,
   loopDetectionMarginSecs: 2,
   port: 5000,
   filename: '/home/pi/video.mov',
   debug: false
-}
+}, overrides );
