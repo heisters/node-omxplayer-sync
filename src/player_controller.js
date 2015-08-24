@@ -72,7 +72,7 @@ Object.defineProperties( PlayerController.prototype, {
       body: [ '/not/used', seconds * 1e6 ]
     }, function( err, usPosition ) { // usPosition is just your arg, not the real new position
       if ( err ) this.logger.error( "Error setting position:", err );
-    } );
+    }.bind(this) );
   } },
 
   // wrapping with duration is a workaround for position sometimes returning
