@@ -1,6 +1,6 @@
 var assert = require("assert")
   , sinon = require("sinon")
-  , PlayerController = require('../src/player_controller')
+  , PlayerController = require('../src/player-controller')
   , logger = require('../src/logger')
 ;
 if ( process.env.DEBUG ) logger.level = 'debug';
