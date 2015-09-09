@@ -4,5 +4,5 @@ var $ = require('jquery')
 
 
 socket.on( 'status', function ( status ) {
-  $( 'body' ).append( "<pre>" ).text( JSON.stringify( status ) );
+  $( "<pre>" ).text( JSON.stringify( status ) ).appendTo( $( "body" ) );
 } );

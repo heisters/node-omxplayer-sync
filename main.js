@@ -7,6 +7,7 @@ var omx = require('omxdirector')
   , config = require('./config')
   , Web = require('./src/web')
   , dns = require('./src/dns')
+  , Clock = require('./src/clock')
   , DEBUG = !!(config.debug || process.env.DEBUG)
 ;
 
@@ -15,19 +16,6 @@ else         { logger.level = 'info'; logger.transports.console.level = 'warn'; 
 
 ////////////////////////////////////////////////////////////////////////////////
 // Synchronization
-
-function Clock() {
-  this.offset = 0;
-  this.isSynchronized = false;
-}
-
-Object.defineProperties( Clock.prototype, {
-  "now": { value: function() { return Date.now() + this.offset; } },
-  "sync": { value: function( then ) {
-    this.offset = Date.now() - then;
-    this.isSynchronized = true;
-  } }
-} );
 
 var clock = new Clock();
 
@@ -119,7 +107,11 @@ bus.on( "ready", function() {
 
 osc.on( "/status", function( args ) {
   var nid = args[ 0 ];
-  var status = args[ 1 ];
+  try {
+    var status = JSON.parse( args[ 1 ] );
+  } catch ( e ) {
+    logger.error( "invalid status message %s", args[ 1 ] );
+  }
 
   web.updateStatus( nid, status );
 } );
@@ -136,7 +128,7 @@ dns.lookupIP( function( ipv4, ipv6, hostname ) {
 
     osc.send( {
       address: "/status",
-      args: [ { type: 's', value: node.id, type: 's', value: JSON.stringify( status ) } ]
+      args: [ { type: 's', value: node.id }, { type: 's', value: JSON.stringify( status ) } ]
     } );
   }, config.statusIntervalMs );
 } );
