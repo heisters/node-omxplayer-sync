@@ -35,7 +35,7 @@ var clock = new Clock();
 var osc = new OSCController( clock, {
   localAddress: '0.0.0.0',
   localPort: config.port,
-  remoteAddress: '192.168.1.255',
+  remoteAddress: config.broadcastAddress,
   remotePort: config.port,
   broadcast: true
 } );

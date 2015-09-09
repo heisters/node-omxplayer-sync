@@ -14,6 +14,7 @@ module.exports = merge( {
   smoothingWindowMs: 1e3 / FPS * 10,
   loopDetectionMarginSecs: 2,
   port: 5000,
+  broadcastAddress: '255.255.255.255',
   filename: '/home/pi/video.mov',
   debug: false
 }, overrides );
