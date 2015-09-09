@@ -16,5 +16,6 @@ module.exports = merge( {
   port: 5000,
   broadcastAddress: '255.255.255.255',
   filename: '/home/pi/video.mov',
+  statusIntervalMs: 250,
   debug: false
 }, overrides );

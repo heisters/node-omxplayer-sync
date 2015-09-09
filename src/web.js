@@ -13,20 +13,28 @@ function Web( options ) {
     res.send( 'Hi' );
   } );
 
-  this.dns = new DNS( options.serviceName, options.port );
+  if ( options.serviceName ) {
+    this.dns = new DNS( options.serviceName, options.port );
+  }
 }
 
 Web.prototype = new EventEmitter();
 
 Object.defineProperties( Web.prototype, {
   listen: { value: function( cb ) {
-    this.dns.listen( function() {
-      this.server = this.app.listen( this.options.port, function() {
+    if ( this.dns ) {
+      this.dns.listen( function() { this.serverListen( cb ); }.bind( this ) );
+    } else {
+      this.serverListen( cb );
+    }
+  } },
 
-        this.emit( "ready", this );
-        if ( cb ) cb();
+  serverListen: { value: function( cb ) {
+    this.server = this.app.listen( this.options.port, function() {
 
-      }.bind( this ) );
+      this.emit( "ready", this );
+      if ( cb ) cb();
+
     }.bind( this ) );
   } }
 } );

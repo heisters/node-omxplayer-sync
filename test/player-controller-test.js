@@ -109,7 +109,7 @@ describe( "PlayerController", function() {
     } );
 
     it( "resets and does nothing if it is off less than the tolerance", function() {
-      controller.updateStatus( 10 /* duration */, 1 /* position */, now );
+      controller.updateSync( 10 /* duration */, 1 /* position */, now );
       controller.synchronize( 1.009 /* position */, now );
 
       controller.seekToMaster();
@@ -118,7 +118,7 @@ describe( "PlayerController", function() {
     } );
 
     it( "resets and does nothing when it loops", function() {
-      controller.updateStatus( 10 /* duration */, 10 /* position */, now );
+      controller.updateSync( 10 /* duration */, 10 /* position */, now );
       controller.synchronize( 0.1 /* position */, now );
 
       controller.seekToMaster();
@@ -127,7 +127,7 @@ describe( "PlayerController", function() {
     } );
 
     it( "speeds up when it is just slightly behind", function() {
-      controller.updateStatus( 10 /* duration */, 1 /* position */, now );
+      controller.updateSync( 10 /* duration */, 1 /* position */, now );
       controller.synchronize( 1.05 /* position */, now );
 
       controller.seekToMaster();
@@ -136,7 +136,7 @@ describe( "PlayerController", function() {
     } );
 
     it( "slows down when it is just slightly ahead", function() {
-      controller.updateStatus( 10 /* duration */, 1 /* position */, now );
+      controller.updateSync( 10 /* duration */, 1 /* position */, now );
       controller.synchronize( 0.95 /* position */, now );
 
       controller.seekToMaster();
@@ -145,7 +145,7 @@ describe( "PlayerController", function() {
     } );
 
     it( "waits if it is ahead by less than the jump tolerance", function() {
-      controller.updateStatus( 10 /* duration */, 3 /* position */, now );
+      controller.updateSync( 10 /* duration */, 3 /* position */, now );
       controller.synchronize( 1.1 /* position */, now );
 
       controller.seekToMaster();
@@ -154,7 +154,7 @@ describe( "PlayerController", function() {
     } );
 
     it( "jumps if it is ahead by more than the jump tolerance", function() {
-      controller.updateStatus( 10 /* duration */, 3 /* position */, now );
+      controller.updateSync( 10 /* duration */, 3 /* position */, now );
       controller.synchronize( 1 /* position */, now );
 
       controller.seekToMaster();
@@ -164,7 +164,7 @@ describe( "PlayerController", function() {
     } );
 
     it( "jumps if it is behind by more than the jump tolerance", function() {
-      controller.updateStatus( 10 /* duration */, 3 /* position */, now );
+      controller.updateSync( 10 /* duration */, 3 /* position */, now );
       controller.synchronize( 5 /* position */, now );
 
       controller.seekToMaster();

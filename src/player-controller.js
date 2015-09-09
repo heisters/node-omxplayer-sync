@@ -18,7 +18,7 @@ function PlayerController( bus, clock, omx, logger, config ) {
   this.speed = 0;
   this.clock = clock;
   this.waiting = false;
-  this.on( "status", this.seekToMaster.bind( this ) );
+  this.on( "sync", this.seekToMaster.bind( this ) );
 }
 
 PlayerController.prototype = new EventEmitter();
@@ -90,7 +90,7 @@ Object.defineProperties( PlayerController.prototype, {
         this.getPosition( function( err, usPosition ) {
           if ( err || usPosition > usDuration ) return;
 
-          this.updateStatus( usDuration / 1e6, usPosition / 1e6, time );
+          this.updateSync( usDuration / 1e6, usPosition / 1e6, time );
 
         }.bind( this ) );
       // don't try to hammer it at more than 2FPS or it's more error prone
@@ -98,13 +98,13 @@ Object.defineProperties( PlayerController.prototype, {
     }.bind( this ) );
   } },
 
-  updateStatus: { value: function( durationSecs, positionSecs, time ) {
+  updateSync: { value: function( durationSecs, positionSecs, time ) {
     this.sync.duration = durationSecs;
     this.sync.seconds = positionSecs;
     this.sync.time = time;
     this.sync.positionUpdated = true;
 
-    if ( this.localValid ) this.emit( "status", this.sync );
+    if ( this.localValid ) this.emit( "sync", this.sync );
   } },
 
   faster: { value: function() {

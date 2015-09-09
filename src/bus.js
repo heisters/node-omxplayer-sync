@@ -1,5 +1,6 @@
 var dbus = require('dbus-native')
   , EventEmitter = require("events").EventEmitter
+  , fs = require('fs')
 ;
 
 function Bus() {

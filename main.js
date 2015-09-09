@@ -1,11 +1,11 @@
 var omx = require('omxdirector')
-  , fs = require('fs')
   , logger = require('./src/logger')
   , PlayerController = require('./src/player-controller')
   , OSCController = require('./src/osc-controller')
   , ClusterNode = require('./src/cluster-node')
   , Bus = require('./src/bus')
   , config = require('./config')
+  , Web = require('./src/web')
   , DEBUG = !!(config.debug || process.env.DEBUG)
 ;
 
@@ -62,6 +62,11 @@ var node = new ClusterNode( { heartbeatTimeout: 1000 } );
 node.heartbeat();
 
 ////////////////////////////////////////////////////////////////////////////////
+// Web Interface
+
+var web = new Web( { port: 8080 /*, serviceName: 'cluster' */ } );
+
+////////////////////////////////////////////////////////////////////////////////
 // Node Transport
 
 node.on( "master", function() {
@@ -79,7 +84,7 @@ node.on( "elect", function( id ) {
   } );
 } );
 
-controller.on( "status", function( status ) {
+controller.on( "sync", function( status ) {
   if ( ! node.isMaster ) return;
 
   var elapsed = status.seconds
@@ -109,6 +114,12 @@ bus.on( "ready", function() {
     } // else my own id
   } );
 } );
+
+setInterval( function() {
+  osc.send( {
+    address: "/status",
+  } );
+}, config.statusIntervalMs );
 
 ////////////////////////////////////////////////////////////////////////////////
 // OMXDirector setup
