@@ -6,6 +6,7 @@ var omx = require('omxdirector')
   , Bus = require('./src/bus')
   , config = require('./config')
   , Web = require('./src/web')
+  , dns = require('./src/dns')
   , DEBUG = !!(config.debug || process.env.DEBUG)
 ;
 
@@ -65,6 +66,7 @@ node.heartbeat();
 // Web Interface
 
 var web = new Web( { port: 8080 /*, serviceName: 'cluster' */ } );
+web.listen();
 
 ////////////////////////////////////////////////////////////////////////////////
 // Node Transport
@@ -115,11 +117,29 @@ bus.on( "ready", function() {
   } );
 } );
 
-setInterval( function() {
-  osc.send( {
-    address: "/status",
-  } );
-}, config.statusIntervalMs );
+osc.on( "/status", function( args ) {
+  var nid = args[ 0 ];
+  var status = args[ 1 ];
+
+  web.updateStatus( nid, status );
+} );
+
+dns.lookupIP( function( ipv4, ipv6, hostname ) {
+  setInterval( function() {
+    var status = {
+      nid: node.id,
+      hostname: hostname,
+      ipv4: ipv4,
+      ipv6: ipv6
+    };
+
+
+    osc.send( {
+      address: "/status",
+      args: [ { type: 's', value: node.id, type: 's', value: JSON.stringify( status ) } ]
+    } );
+  }, config.statusIntervalMs );
+} );
 
 ////////////////////////////////////////////////////////////////////////////////
 // OMXDirector setup

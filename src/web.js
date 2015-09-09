@@ -1,17 +1,24 @@
 var EventEmitter = require('events').EventEmitter
+  , path = require('path')
   , express = require('express')
+  , socketio = require('socket.io')
+  , browserify = require('browserify-middleware')
   , DNS = require('./dns')
   , debug = require('debug')('web')
 ;
 
-
 function Web( options ) {
   this.options = options;
   this.app = express();
-  this.app.get('/', function( req, res ) {
+  this.dir = path.resolve( __dirname + '/../html' );
+
+  this.app.use( '/js', browserify( this.dir + '/js' ) );
+
+  this.app.get( '/', function( req, res ) {
     debug( 'GET /: OK' );
-    res.send( 'Hi' );
-  } );
+    res.sendFile( this.dir + '/index.html' );
+  }.bind( this ) );
+
 
   if ( options.serviceName ) {
     this.dns = new DNS( options.serviceName, options.port );
@@ -36,6 +43,14 @@ Object.defineProperties( Web.prototype, {
       if ( cb ) cb();
 
     }.bind( this ) );
+
+    this.io = socketio( this.server );
+    //this.io.on( 'connection', function( socket ) { } );
+
+  } },
+
+  updateStatus: { value: function( nid, status ) {
+    if ( this.io ) this.io.sockets.emit( "status", status );
   } }
 } );
 

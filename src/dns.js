@@ -10,6 +10,22 @@ function DNS( serviceName, httpPort ) {
   this.httpPort = httpPort;
 }
 
+DNS.lookupIP = function( cb ) {
+  var waiting = 2;
+  var hn = os.hostname();
+  var ipv4 = ipv6 = undefined;
+
+  dns.lookup( hn, 4, function( err, address, family ) {
+    if ( ! err ) ipv4 = address;
+    if ( --waiting === 0 && cb ) cb( ipv4, ipv6, hn );
+  } );
+
+  dns.lookup( hn, 6, function( err, address, family ) {
+    if ( ! err ) ipv6 = address;
+    if ( --waiting === 0 && cb ) cb( ipv4, ipv6, hn );
+  } );
+};
+
 DNS.prototype = new EventEmitter();
 
 Object.defineProperties( DNS.prototype, {
@@ -24,17 +40,10 @@ Object.defineProperties( DNS.prototype, {
   } },
 
   lookupIP: { value: function( cb ) {
-    var waiting = 2;
-    var hn = os.hostname();
-
-    dns.lookup( hn, 4, function( err, address, family ) {
-      if ( ! err ) this.ipv4 = address;
-      if ( --waiting === 0 && cb ) cb( this );
-    }.bind( this ) );
-
-    dns.lookup( hn, 6, function( err, address, family ) {
-      if ( ! err ) this.ipv6 = address;
-      if ( --waiting === 0 && cb ) cb( this );
+    DNS.lookupIP( function( ipv4, ipv6 ) {
+      this.ipv4 = ipv4;
+      this.ipv6 = ipv6;
+      cb( this );
     }.bind( this ) );
   } },
 
