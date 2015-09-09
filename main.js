@@ -39,7 +39,7 @@ var osc = new OSCController( clock, {
   remotePort: config.port,
   broadcast: true
 } );
-osc.on( "ready", function() { logger.info( "OSC sending and receiving on port " + options.localPort ); } );
+osc.on( "ready", function() { logger.info( "OSC sending and receiving on port " + config.port ); } );
 osc.open();
 
 ////////////////////////////////////////////////////////////////////////////////
