@@ -10,8 +10,11 @@
   "license": "MIT",
   "dependencies": {
     "dbus-native": "^0.2.0",
+    "debug": "^2.2.0",
+    "express": "^4.13.3",
     "merge": "^1.2.0",
     "mpris": "0.0.2",
+    "multicast-dns": "^3.0.0",
     "node-uuid": "^1.4.3",
     "omxdirector": "heisters/omxdirector",
     "osc": "heisters/osc.js#specify-timetag-time",
