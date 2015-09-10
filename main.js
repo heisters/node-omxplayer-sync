@@ -104,8 +104,6 @@ controller.on( "sync", function( status ) {
 
 bus.on( "ready", function() {
   osc.on( "/sync", function( args ) {
-    if ( node.isElecting ) return;
-
     node.heartbeat();
     if ( node.isIndeterminate ) {
       logger.info( "got sync from master, becoming a slave without election" );
