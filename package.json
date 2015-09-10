@@ -16,7 +16,6 @@
     "express": "^4.13.3",
     "jquery": "^2.1.4",
     "merge": "^1.2.0",
-    "mpris": "0.0.2",
     "multicast-dns": "^3.0.0",
     "node-uuid": "^1.4.3",
     "normalize.css": "^3.0.3",
