@@ -16,7 +16,7 @@
           <tr class="ipv4"><th>IP (v4)</th><td><%= status.ipv4 %></td></tr>
           <tr class="ipv6"><th>IP (v6)</th><td><%= status.ipv6 %></td></tr>
           <tr class="last-seen"><th>Last seen</th><td><span class="time"><%= time - status.lastSeen %></span>ms ago</td></tr>
-          <tr class="sync"><th>Sync position</th><td><%= status.sync.position %></td></tr>
+          <tr class="sync"><th>Sync position</th><td><%= status.sync.position.toFixed( 2 ) %></td></tr>
         </table>
       </div>
     </script>
