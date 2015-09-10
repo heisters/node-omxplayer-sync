@@ -77,6 +77,9 @@ node.on( "elect", function( id ) {
 bus.on( "ready", function() {
   osc.on( "/elect", function( args ) {
     var otherId = args[ 0 ];
+
+    node.elect(); // respond, even if heartbeat hasn't been lost
+
     if ( node.id > otherId ) {
       logger.info( "got elect " + otherId + ", incrementing votes" );
       node.votes++;
@@ -166,3 +169,7 @@ if ( ! DEBUG ) args.push("--no-osd");
 omx.play( config.filename, {loop: true, args: args} );
 
 bus.create();
+
+logger.info( "================================================================================" );
+logger.info( "STARTED" );
+logger.info( "config", config );
