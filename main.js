@@ -78,7 +78,7 @@ bus.on( "ready", function() {
   osc.on( "/elect", function( args ) {
     var otherId = args[ 0 ];
 
-    node.elect(); // respond, even if heartbeat hasn't been lost
+    if ( ! node.isElecting ) node.elect(); // respond, even if heartbeat hasn't been lost
 
     if ( node.id > otherId ) {
       logger.info( "got elect " + otherId + ", incrementing votes" );
