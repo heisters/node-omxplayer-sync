@@ -94,7 +94,7 @@ Object.defineProperties( PlayerController.prototype, {
         var time = this.clock.now();
 
         this.getPosition( function( err, usPosition ) {
-          if ( err || usPosition > usDuration ) return;
+          if ( err || usPosition > usDuration || usPosition < 0 ) return;
 
           this.updateSync( usDuration / 1e6, usPosition / 1e6, time );
 
