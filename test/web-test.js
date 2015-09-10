@@ -1,5 +1,4 @@
 var assert = require('assert')
-  , sinon = require('sinon')
   , Web = require('../src/web')
   , http = require('http')
 ;

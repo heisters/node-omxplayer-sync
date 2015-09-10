@@ -1,12 +1,14 @@
 var dbus = require('dbus-native')
   , EventEmitter = require("events").EventEmitter
   , fs = require('fs')
+  , util = require('util')
 ;
 
 function Bus() {
+  EventEmitter.call( this );
 }
 
-Bus.prototype = new EventEmitter();
+util.inherits( Bus, EventEmitter );
 
 Object.defineProperties( Bus.prototype, {
   invoke: { value: function() {

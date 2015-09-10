@@ -1,18 +1,22 @@
 var EventEmitter = require('events').EventEmitter
+  , util = require('util')
   , uuid = require('node-uuid')
+  , timers = require('timers')
   , NODE_STATE = { master: 0, slave: 1, indeterminate: 2 }
 ;
 
-function ClusterNode( options ) {
+function ClusterNode( options, timer ) {
+  EventEmitter.call( this );
   this.heartbeatTimeout = options.heartbeatTimeout || 1000;
   this.electTimeout = options.electTimeout || 100;
   this.votingTimeout = options.votingTimeout || 750;
   this.state = NODE_STATE.indeterminate;
   this.id = uuid.v4();
+  this.timer = timer || timers;
   this.on( "heartbeat lost", this.elect.bind( this ) );
 }
 
-ClusterNode.prototype = new EventEmitter();
+util.inherits( ClusterNode, EventEmitter );
 
 Object.defineProperties( ClusterNode.prototype, {
   elect: { value: function( cycle ) {
@@ -20,21 +24,28 @@ Object.defineProperties( ClusterNode.prototype, {
     if ( cycle === 0 ) this.votes = 0;
     this.state = NODE_STATE.indeterminate;
 
-    this.emit( "elect", this.id );
-    this.__electTimeout = setTimeout( function() {
+    this.__electTimeout = this.timer.setTimeout( function() {
       this.elect( cycle + 1 );
     }.bind( this ), this.electTimeout );
+
+    this.emit( "elect", this.id );
   } },
 
+  isElecting: {
+    get: function() { return !! ( this.__electTimeout || this.__votingTimeout ); }
+  },
+
   stopElection: { value: function() {
-    clearTimeout( this.__electTimeout );
-    clearTimeout( this.__votingTimeout );
+    this.timer.clearTimeout( this.__electTimeout );
+    this.timer.clearTimeout( this.__votingTimeout );
+    delete this.__electTimeout;
+    delete this.__votingTimeout;
   } },
 
   heartbeat: { value: function() {
-    if ( this.__heartbeatTimeout ) clearTimeout( this.__heartbeatTimeout );
+    if ( this.__heartbeatTimeout ) this.timer.clearTimeout( this.__heartbeatTimeout );
 
-    this.__heartbeatTimeout = setTimeout( function(){
+    this.__heartbeatTimeout = this.timer.setTimeout( function(){
       this.emit( "heartbeat lost" )
     }.bind( this ), this.heartbeatTimeout );
 
@@ -42,13 +53,16 @@ Object.defineProperties( ClusterNode.prototype, {
   } },
 
   votes: {
-    get: function() { return this._votes; },
+    get: function() { return this._votes || 0; },
     set: function( v ) {
       this._votes = v;
-      if ( this.__votingTimeout ) clearTimeout( this.__votingTimeout );
-      this.__votingTimeout = setTimeout( function() {
-        this.isMaster = true;
-      }.bind( this ), this.votingTimeout );
+
+      if ( this.votes > 0 && this.isElecting ) {
+        if ( this.__votingTimeout ) this.timer.clearTimeout( this.__votingTimeout );
+        this.__votingTimeout = this.timer.setTimeout( function() {
+          this.isMaster = true;
+        }.bind( this ), this.votingTimeout );
+      }
     }
   },
 

@@ -1,8 +1,10 @@
 var osc = require('osc')
   , EventEmitter = require('events').EventEmitter
+  , util = require('util')
 ;
 
 function OSCController( clock, options ) {
+  EventEmitter.call( this );
   this.clock = clock;
   this.port = new osc.UDPPort( options );
   this.port.on( "bundle", this.handleBundle.bind( this ) );
@@ -10,7 +12,7 @@ function OSCController( clock, options ) {
   this.port.on( "ready", function() { this.emit( "ready" ); }.bind( this ) );
 }
 
-OSCController.prototype = new EventEmitter();
+util.inherits( OSCController, EventEmitter );
 
 Object.defineProperties( OSCController.prototype, {
   handleMessage: { value: function( message ) {

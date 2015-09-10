@@ -74,6 +74,19 @@ node.on( "elect", function( id ) {
   } );
 } );
 
+bus.on( "ready", function() {
+  osc.on( "/elect", function( args ) {
+    var otherId = args[ 0 ];
+    if ( node.id > otherId ) {
+      logger.info( "got elect " + otherId + ", incrementing votes" );
+      node.votes++;
+    } else if ( node.id < otherId ) {
+      logger.info( "got elect " + otherId + ", becoming slave" );
+      node.isSlave = true;
+    } // else my own id
+  } );
+} );
+
 controller.on( "sync", function( status ) {
   if ( ! node.isMaster ) return;
 
@@ -91,17 +104,6 @@ bus.on( "ready", function() {
     node.heartbeat();
     if ( node.isIndeterminate ) node.isSlave = true;
     if ( node.isSlave ) controller.synchronize( args[ 0 ], args[ 1 ].native );
-  } );
-
-  osc.on( "/elect", function( args ) {
-    var otherId = args[ 0 ];
-    if ( node.id > otherId ) {
-      logger.info( "got elect " + otherId + ", incrementing votes" );
-      node.votes++;
-    } else if ( node.id < otherId ) {
-      logger.info( "got elect " + otherId + ", becoming slave" );
-      node.isSlave = true;
-    } // else my own id
   } );
 } );
 

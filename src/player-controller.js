@@ -1,6 +1,7 @@
 var Queue = require('./queue')
   , merge = require('merge')
   , EventEmitter = require('events').EventEmitter
+  , util = require('util')
 ;
 
 var INTERFACE_SHORT_TO_FULL = {
@@ -9,6 +10,7 @@ var INTERFACE_SHORT_TO_FULL = {
 };
 
 function PlayerController( bus, clock, omx, logger, config ) {
+  EventEmitter.call( this );
   this.bus = bus;
   this.omx = omx;
   this.logger = logger;
@@ -21,7 +23,7 @@ function PlayerController( bus, clock, omx, logger, config ) {
   this.on( "sync", this.seekToMaster.bind( this ) );
 }
 
-PlayerController.prototype = new EventEmitter();
+util.inherits( PlayerController, EventEmitter );
 
 Object.defineProperties( PlayerController.prototype, {
   resetMasterSync: { value: function() {

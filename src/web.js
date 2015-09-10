@@ -1,4 +1,5 @@
 var EventEmitter = require('events').EventEmitter
+  , util = require('util')
   , path = require('path')
   , merge = require('merge')
   , express = require('express')
@@ -14,6 +15,7 @@ browserify.settings( {
 } );
 
 function Web( options ) {
+  EventEmitter.call( this );
   this.options = options;
   this.app = express();
   this.dir = path.resolve( __dirname + '/../html' );
@@ -34,7 +36,7 @@ function Web( options ) {
   this.nodes = {};
 }
 
-Web.prototype = new EventEmitter();
+util.inherits( Web, EventEmitter );
 
 Object.defineProperties( Web.prototype, {
   listen: { value: function( cb ) {

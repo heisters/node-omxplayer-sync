@@ -1,11 +1,13 @@
 var mdns = require('multicast-dns')()
   , dns = require('dns')
   , os = require('os')
+  , util = require('util')
   , EventEmitter = require('events').EventEmitter
   , debug = require('debug')('dns')
 ;
 
 function DNS( serviceName, httpPort ) {
+  EventEmitter.call( this );
   this.serviceName = serviceName;
   this.httpPort = httpPort;
 }
@@ -27,7 +29,7 @@ DNS.lookupIP = function( cb ) {
   } );
 };
 
-DNS.prototype = new EventEmitter();
+util.inherits( DNS, EventEmitter );
 
 Object.defineProperties( DNS.prototype, {
   listen: { value: function( cb ) {
