@@ -14,16 +14,20 @@ function PlayerController( bus, clock, omx, logger, config ) {
   this.logger = logger;
   this.config = config;
   this.sync = { seconds: -1, time: -1 };
-  this.master = { values: new Queue(), sums: { time: 0, seconds: 0 }, avgs: { time: 0, seconds: 0 }, updated: false };
   this.speed = 0;
   this.clock = clock;
   this.waiting = false;
+  this.resetMasterSync();
   this.on( "sync", this.seekToMaster.bind( this ) );
 }
 
 PlayerController.prototype = new EventEmitter();
 
 Object.defineProperties( PlayerController.prototype, {
+  resetMasterSync: { value: function() {
+    this.master = { values: new Queue(), sums: { time: 0, seconds: 0 }, avgs: { time: 0, seconds: 0 }, updated: false };
+  } },
+
   invokeOMXDbus: { value: function( interfaceShort, options, cb ) {
     var interface = INTERFACE_SHORT_TO_FULL[ interfaceShort ] || interfaceShort;
     this.bus.invoke( merge( {
@@ -135,6 +139,9 @@ Object.defineProperties( PlayerController.prototype, {
     if ( ! this.clock.isSynchronized ) this.logger.sync( "clock to master time" );
     this.clock.sync( time ); // doesn't compensate for latency...
 
+    if ( seconds < this.config.loopDetectionMarginSecs ) {
+      this.resetMasterSync();
+    }
 
     // Calculate averages
 
@@ -143,7 +150,10 @@ Object.defineProperties( PlayerController.prototype, {
     this.master.sums.time += time;
     this.master.sums.seconds += seconds;
 
-    while ( this.master.values.getLength() && this.master.values.peek().time < ( time - this.config.smoothingWindowMs ) ) {
+    while (
+      this.master.values.getLength() &&
+        this.master.values.peek().time < ( time - this.config.smoothingWindowMs )
+    ) {
       var v = this.master.values.dequeue();
       this.master.sums.time -= v.time;
       this.master.sums.seconds -= v.seconds;

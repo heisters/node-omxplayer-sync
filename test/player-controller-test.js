@@ -18,7 +18,7 @@ describe( "PlayerController", function() {
   beforeEach( function() {
     fakeOmx = { faster: sinon.spy(), slower: sinon.spy() };
     fakeBus = { invoke: sinon.spy() };
-    fakeClock = { sync: sinon.spy(), now: sinon.spy() };
+    fakeClock = { sync: sinon.spy(), now: sinon.spy(), isSynchronized: true };
     if ( process.env.DEBUG ) {
       fakeLogger = logger;
     } else {
@@ -171,6 +171,22 @@ describe( "PlayerController", function() {
 
       assertExactlyPlayMethodsCalled( "setPosition" );
       assert( controller.setPosition.withArgs( 5 ).called );
+    } );
+
+    describe( "with smoothing", function() {
+      beforeEach( function() {
+        controller.config.smoothingWindowMs = 100;
+      } );
+
+      it( "resets and does nothing when it loops", function() {
+        controller.updateSync( 10 /* duration */, 10 /* position */, now );
+        controller.synchronize( 10 /* position */, now + 0.1 );
+        controller.synchronize( 0.1 /* position */, now + 0.2 );
+
+        controller.seekToMaster();
+
+        assertExactlyPlayMethodsCalled( "reset" );
+      } );
     } );
   } );
 } );
