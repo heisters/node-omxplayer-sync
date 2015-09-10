@@ -13,6 +13,7 @@ function DNS( serviceName, httpPort ) {
 DNS.lookupIP = function( cb ) {
   var waiting = 2;
   var hn = os.hostname();
+  if ( ! /\.local$/.test( hn ) ) hn += '.local'; // to force mDNS, rather than local hosts file
   var ipv4 = ipv6 = undefined;
 
   dns.lookup( hn, 4, function( err, address, family ) {
