@@ -1,11 +1,16 @@
 var EventEmitter = require('events').EventEmitter
   , path = require('path')
+  , merge = require('merge')
   , express = require('express')
   , socketio = require('socket.io')
   , browserify = require('browserify-middleware')
   , DNS = require('./dns')
   , debug = require('debug')('web')
 ;
+
+browserify.settings( {
+  transform: [ 'browserify-css' ]
+} );
 
 function Web( options ) {
   this.options = options;
@@ -23,6 +28,8 @@ function Web( options ) {
   if ( options.serviceName ) {
     this.dns = new DNS( options.serviceName, options.port );
   }
+
+  this.nodes = {};
 }
 
 Web.prototype = new EventEmitter();
@@ -50,7 +57,22 @@ Object.defineProperties( Web.prototype, {
   } },
 
   updateStatus: { value: function( nid, status ) {
-    if ( this.io ) this.io.sockets.emit( "status", status );
+    var s = merge( status, { lastSeen: Date.now() } );
+    this.nodes[ nid ] = s;
+    this.updateClientStatus();
+  } },
+
+  updateClientStatus: { value: function() {
+    if ( this.__updateClientStatusInterval ) return;
+    if ( ! this.io ) return;
+
+    this.__updateClientStatusInterval = setInterval( function() {
+      for ( var nid in this.nodes ) {
+        if ( ! this.nodes.hasOwnProperty( nid ) ) continue;
+        if ( this.nodes[ nid ].lastSeen < ( Date.now() - 1e3 ) ) delete this.nodes[ nid ];
+      }
+      this.io.sockets.emit( "status", this.nodes );
+    }.bind( this ), 250 );
   } }
 } );
 
