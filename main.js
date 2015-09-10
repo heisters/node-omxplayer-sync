@@ -121,11 +121,12 @@ osc.on( "/status", function( args ) {
 dns.lookupIP( function( ipv4, ipv6, hostname ) {
   setInterval( function() {
     var status = {
-      nid: node.id,
-      hostname: hostname,
-      ipv4: ipv4,
-      ipv6: ipv6,
-      role: node.isMaster ? "master" : ( node.isSlave ? "slave" : "indeterminate" )
+        nid: node.id
+      , hostname: hostname
+      , ipv4: ipv4
+      , ipv6: ipv6
+      , role: node.isMaster ? "master" : ( node.isSlave ? "slave" : "indeterminate" )
+      , sync: controller.masterSync
     };
 
 

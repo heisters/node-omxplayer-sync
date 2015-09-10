@@ -166,6 +166,10 @@ Object.defineProperties( PlayerController.prototype, {
     this.master.avgs.seconds = this.master.sums.seconds / l;
   } },
 
+  masterSync: { get: function() {
+    return { time: this.master.avgs.time, position: this.master.avgs.seconds };
+  } },
+
   seekToMaster: { value: function() {
     if ( this.waiting || ! this.localValid || ! this.masterValid ) return;
 
