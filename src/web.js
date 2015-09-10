@@ -6,10 +6,11 @@ var EventEmitter = require('events').EventEmitter
   , browserify = require('browserify-middleware')
   , DNS = require('./dns')
   , debug = require('debug')('web')
+  , browserifyCSS = require('browserify-css')
 ;
 
 browserify.settings( {
-  transform: [ 'browserify-css' ]
+  transform: [ browserifyCSS ]
 } );
 
 function Web( options ) {
