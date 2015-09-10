@@ -61,6 +61,9 @@ function onDOMReady() {
       $( templates.status( {
         status: nstatus
         , time: status.time
+        , nodeUrl: function( host ) {
+            return window.location.href.replace( new RegExp( window.location.hostname, 'g' ), host );
+          }
       } ) ).appendTo( $container );
     }
   } );
