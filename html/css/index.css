@@ -1,4 +1,53 @@
 @import url("../../node_modules/normalize.css/normalize.css");
+@import url("roboto.css");
+
+html {
+  box-sizing: border-box;
+}
+*, *:before, *:after {
+  box-sizing: inherit;
+}
 
 body {
+  font-family: Roboto, sans-serif;
+  width: 90%;
+  max-width: 960px;
+  margin: 20px auto;
+}
+
+.status {
+  width: 50%;
+  min-width: 290px;
+  display: inline-block;
+}
+
+.status h3 {
+  font-weight: 400;
+}
+.status.master h3 {
+  font-weight: 900;
+}
+.status.master .role td {
+  font-weight: 900;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+
+th {
+  text-align: left;
+  min-width: 7em;
+  font-weight: 400;
+}
+
+td {
+  font-weight: 300;
+}
+
+.time {
+  display: inline-block;
+  width: 4em;
 }

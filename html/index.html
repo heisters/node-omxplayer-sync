@@ -4,4 +4,23 @@
   <script src="/js/index.js"></script>
 </head>
 <body>
+  <h1>Video Cluster Control</h1>
+
+  <section>
+    <h2>Players</h2>
+    <script type="text/html" id="status-template">
+      <div class="status <%= status.role %>">
+        <h3><%= status.hostname %></h3>
+        <table class="<%= status.role %>">
+          <tr class="role"><th>Role</th><td><%= status.role %></td></tr>
+          <tr class="ipv4"><th>IP (v4)</th><td><%= status.ipv4 %></td></tr>
+          <tr class="ipv6"><th>IP (v6)</th><td><%= status.ipv6 %></td></tr>
+          <tr class="last-seen"><th>Last seen</th><td><span class="time"><%= time - status.lastSeen %></span>ms ago</td></tr>
+        </table>
+      </div>
+    </script>
+    <div id="statuses">
+    </div>
+  </section>
+
 </body>

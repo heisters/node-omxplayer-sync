@@ -19,6 +19,7 @@ function Web( options ) {
   this.dir = path.resolve( __dirname + '/../html' );
 
   this.app.use( '/js', browserify( this.dir + '/js' ) );
+  this.app.use( express.static( this.dir ) );
 
   this.app.get( '/', function( req, res ) {
     debug( 'GET /: OK' );
@@ -68,11 +69,13 @@ Object.defineProperties( Web.prototype, {
     if ( ! this.io ) return;
 
     this.__updateClientStatusInterval = setInterval( function() {
+      var time = Date.now();
       for ( var nid in this.nodes ) {
         if ( ! this.nodes.hasOwnProperty( nid ) ) continue;
-        if ( this.nodes[ nid ].lastSeen < ( Date.now() - 1e3 ) ) delete this.nodes[ nid ];
+        if ( this.nodes[ nid ].lastSeen < ( time - 1e3 ) ) delete this.nodes[ nid ];
       }
-      this.io.sockets.emit( "status", this.nodes );
+
+      this.io.sockets.emit( "status", { time: time, nodes: this.nodes } );
     }.bind( this ), 250 );
   } }
 } );
