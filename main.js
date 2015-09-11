@@ -47,7 +47,7 @@ bus.on( "ready", function( dbus ) {
 ////////////////////////////////////////////////////////////////////////////////
 // Node
 
-var node = new ClusterNode( { heartbeatTimeout: 1000 } );
+var node = new ClusterNode( { heartbeatTimeout: 2000 } );
 node.heartbeat();
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -78,7 +78,7 @@ bus.on( "ready", function() {
   osc.on( "/elect", function( args ) {
     var otherId = args[ 0 ];
 
-    if ( ! node.isElecting ) node.elect(); // respond, even if heartbeat hasn't been lost
+    if ( ! node.isElecting ) node.elect();
 
     if ( node.id > otherId ) {
       logger.info( "got elect " + otherId + ", incrementing votes" );
@@ -168,6 +168,5 @@ omx.play( config.filename, {loop: true, args: args} );
 
 bus.create();
 
-logger.info( "================================================================================" );
 logger.info( "STARTED" );
 logger.info( "config", config );

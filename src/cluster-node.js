@@ -7,27 +7,19 @@ var EventEmitter = require('events').EventEmitter
 
 function ClusterNode( options, timer ) {
   EventEmitter.call( this );
-  this.heartbeatTimeout = options.heartbeatTimeout || 1000;
+  this.heartbeatTimeout = options.heartbeatTimeout || 2000;
   this.electTimeout = options.electTimeout || 100;
   this.votingTimeout = options.votingTimeout || 750;
   this.state = NODE_STATE.indeterminate;
   this.id = uuid.v4();
   this.timer = timer || timers;
-  this.on( "heartbeat lost", this.elect.bind( this ) );
 }
 
 util.inherits( ClusterNode, EventEmitter );
 
 Object.defineProperties( ClusterNode.prototype, {
-  elect: { value: function( cycle ) {
-    cycle = cycle === undefined ? 0 : cycle;
-    if ( cycle === 0 ) this.votes = 0;
-    this.state = NODE_STATE.indeterminate;
-
-    this.__electTimeout = this.timer.setTimeout( function() {
-      this.elect( cycle + 1 );
-    }.bind( this ), this.electTimeout );
-
+  elect: { value: function() {
+    this.__electTimeout = this.timer.setTimeout( this.elect.bind( this ), this.electTimeout );
     this.emit( "elect", this.id );
   } },
 
@@ -46,7 +38,9 @@ Object.defineProperties( ClusterNode.prototype, {
     if ( this.__heartbeatTimeout ) this.timer.clearTimeout( this.__heartbeatTimeout );
 
     this.__heartbeatTimeout = this.timer.setTimeout( function(){
-      this.emit( "heartbeat lost" )
+      this.votes = 0;
+      this.state = NODE_STATE.indeterminate;
+      this.elect()
     }.bind( this ), this.heartbeatTimeout );
 
     this.emit( "heartbeat" );
@@ -57,7 +51,7 @@ Object.defineProperties( ClusterNode.prototype, {
     set: function( v ) {
       this._votes = v;
 
-      if ( this.votes > 0 && this.isElecting ) {
+      if ( this.isElecting ) {
         if ( this.__votingTimeout ) this.timer.clearTimeout( this.__votingTimeout );
         this.__votingTimeout = this.timer.setTimeout( function() {
           this.isMaster = true;
