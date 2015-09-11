@@ -11,21 +11,53 @@ function ClusterNode( options, timer ) {
   this.electTimeout = options.electTimeout || 100;
   this.votingTimeout = options.votingTimeout || 750;
   this.state = NODE_STATE.indeterminate;
-  this.id = uuid.v4();
+  this.nid = options.nid || uuid.v4();
   this.timer = timer || timers;
+  this.elections = {};
 }
+
+ClusterNode.VOTE_RESULT = { SLAVE: -1, NONE: 0, MASTER: 1 };
+ClusterNode.ELECTION_STATE = { UNKNOWN: undefined, UNRESOLVED: false, RESOLVED: true };
 
 util.inherits( ClusterNode, EventEmitter );
 
 Object.defineProperties( ClusterNode.prototype, {
-  elect: { value: function() {
-    this.__electTimeout = this.timer.setTimeout( this.elect.bind( this ), this.electTimeout );
-    this.emit( "elect", this.id );
+  elect: { value: function( eid ) {
+    this.__electTimeout = this.timer.setTimeout( function() {
+      this.elect( eid );
+    }.bind( this ), this.electTimeout );
+
+    this.emit( "elect", this.nid, eid );
   } },
 
-  isElecting: {
-    get: function() { return !! ( this.__electTimeout || this.__votingTimeout ); }
-  },
+  electionIsUnknown: { value: function( eid ) {
+    return this.elections[ eid ] === ClusterNode.ELECTION_STATE.UNKNOWN;
+  } },
+
+  electionIsUnresolved: { value: function( eid ) {
+    return this.elections[ eid ] === ClusterNode.ELECTION_STATE.UNRESOLVED;
+  } },
+
+  electionIsResolved: { value: function( eid ) {
+    return this.elections[ eid ] === ClusterNode.ELECTION_STATE.RESOLVED;
+  } },
+
+  resolveElection: { value: function( eid ) {
+    this.elections[ eid ] = ClusterNode.ELECTION_STATE.RESOLVED;
+  } },
+
+  unresolveElection: { value: function( eid ) {
+    this.elections[ eid ] = ClusterNode.ELECTION_STATE.UNRESOLVED;
+  } },
+
+  startElection: { value: function( eid ) {
+    eid = eid || uuid.v4();
+
+    this.state = NODE_STATE.indeterminate;
+    this.unresolveElection( eid );
+    this.elect( eid )
+    this.waitToBecomeMaster( eid );
+  } },
 
   stopElection: { value: function() {
     this.timer.clearTimeout( this.__electTimeout );
@@ -37,28 +69,41 @@ Object.defineProperties( ClusterNode.prototype, {
   heartbeat: { value: function() {
     if ( this.__heartbeatTimeout ) this.timer.clearTimeout( this.__heartbeatTimeout );
 
-    this.__heartbeatTimeout = this.timer.setTimeout( function(){
-      this.votes = 0;
-      this.state = NODE_STATE.indeterminate;
-      this.elect()
-    }.bind( this ), this.heartbeatTimeout );
-
-    this.emit( "heartbeat" );
+    this.__heartbeatTimeout = this.timer.setTimeout( this.startElection.bind( this ), this.heartbeatTimeout );
   } },
 
-  votes: {
-    get: function() { return this._votes || 0; },
-    set: function( v ) {
-      this._votes = v;
+  vote: { value: function( otherNid, eid ) {
+    var result = ClusterNode.VOTE_RESULT.NONE;
 
-      if ( this.isElecting ) {
-        if ( this.__votingTimeout ) this.timer.clearTimeout( this.__votingTimeout );
-        this.__votingTimeout = this.timer.setTimeout( function() {
-          this.isMaster = true;
-        }.bind( this ), this.votingTimeout );
-      }
-    }
-  },
+    if ( this.electionIsUnknown( eid ) ) this.startElection( eid );
+
+    if ( this.nid > otherNid ) {
+      result = ClusterNode.VOTE_RESULT.MASTER;
+      this.waitToBecomeMaster( eid );
+    } else if ( this.nid < otherNid ) {
+      result = ClusterNode.VOTE_RESULT.SLAVE;
+      this.resolveElection( eid );
+      this.isSlave = true;
+    } // else my own id
+
+    console.log( this.nid, otherNid, result );
+    return result;
+  } },
+
+  waitToBecomeMaster: { value: function( eid ) {
+    if ( this.electionIsResolved( eid ) ) console.log( 'election resolved' );
+    if ( this.electionIsResolved( eid ) ) return;
+
+    if ( this.__votingTimeout ) this.timer.clearTimeout( this.__votingTimeout );
+    this.__votingTimeout = this.timer.setTimeout( function() {
+      if ( this.electionIsResolved( eid ) ) console.log( 'election resolved' );
+      if ( this.electionIsResolved( eid ) ) return;
+
+      console.log( 'vt expired, setting master %s', this.nid );
+      this.resolveElection( eid );
+      this.isMaster = true;
+    }.bind( this ), this.votingTimeout );
+  } },
 
   isMaster: {
     get: function() { return this.state === NODE_STATE.master; },
@@ -80,7 +125,11 @@ Object.defineProperties( ClusterNode.prototype, {
       this.stopElection();
       this.emit( "slave" );
     }
-  }
+  },
+
+  role: { get: function() {
+    return this.isMaster ? "master" : ( this.isSlave ? "slave" : "indeterminate" );
+  } }
 } );
 
 module.exports = ClusterNode;

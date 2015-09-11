@@ -4,128 +4,115 @@ var assert = require('assert')
 ;
 
 describe( "ClusterNode", function() {
-  var node
-    , timeouts
-  ;
 
-  beforeEach( function() {
-    timeouts = [];
-    node = new ClusterNode( { heartbeatTimeout: 1, votingTimeout: 1 } );
-  } );
+  describe( "in isolation", function() {
+    var node
+      , electSpy
+    ;
 
-  it( "starts in an indeterminate state", function() {
-    assert( ! node.isMaster );
-    assert( ! node.isSlave );
-    assert( node.isIndeterminate );
-  } );
+    beforeEach( function() {
+      node = new ClusterNode( { nid: "b", heartbeatTimeout: 1, votingTimeout: 1 } );
+      electSpy = sinon.spy();
+    } );
 
-  it( "starts an election if it does not hear from a master within heartbeatTimeout milliseconds", function( done ) {
-    node.once( "elect", function() {
+    afterEach( function() {
+      node.removeAllListeners();
+    } );
+
+    it( "starts in an indeterminate state", function() {
+      assert( ! node.isMaster );
+      assert( ! node.isSlave );
       assert( node.isIndeterminate );
-      done();
     } );
-    node.heartbeat();
-    node.elect();
+
+    it( "starts an election if it does not hear from a master within heartbeatTimeout milliseconds", function( done ) {
+      node.once( "elect", function() {
+        assert( node.isIndeterminate );
+        done();
+      } );
+      node.heartbeat();
+    } );
   } );
 
-  it( "declares victory if it receives votes and is not told to be a slave", function( done ) {
-    var electSpy = sinon.spy();
-    node.once( "elect", function() { electSpy(); node.votes++; } );
-    node.once( "slave", function() {
-      assert.fail( "should not be a slave" );
-      done();
-    } );
-    node.once( "master", function() {
-      assert( electSpy.called );
-      assert( node.isMaster );
-      setTimeout( done, 2 ); // wait to ensure slave isn't set
-    } );
-    node.heartbeat();
-    node.elect();
-  } );
+  describe( "with a simulated cluster", function() {
+    var nodeA
+      , nodeB
+      , nodeC
+      , allNodes
+    ;
 
-  it( "declares victory if it does not get any responses to the election", function( done ) {
-    var electSpy = sinon.spy();
-    node.once( "elect", electSpy );
-    node.once( "slave", function() {
-      assert.fail( "should not be a slave" );
-      done();
-    } );
-    node.once( "master", function() {
-      assert( electSpy.called );
-      assert( node.isMaster );
-      setTimeout( done, 2 ); // wait to ensure slave isn't set
-    } );
-    node.heartbeat();
-    node.elect();
-  } );
+    beforeEach( function() {
+      nodeA = new ClusterNode( { nid: "a", heartbeatTimeout: 1, votingTimeout: 1 } );
+      nodeB = new ClusterNode( { nid: "b", heartbeatTimeout: 1, votingTimeout: 1 } );
+      nodeC = new ClusterNode( { nid: "c", heartbeatTimeout: 1, votingTimeout: 1 } );
+      allNodes = shuffleArray( [ nodeA, nodeB, nodeC ] );
 
-  it( "becomes master if it receives votes before it starts an election", function( done ) {
-    node.heartbeatTimeout = 1000;
-    node.once( "elect", function() {
-      //assert.fail( "should never get to an election" );
+      allNodes.forEach( function( n ) {
+        n.on( "elect", function( nid, eid ) {
+          allNodes.forEach( function( n2 ) { n2.vote( nid, eid ); } );
+        } );
+      } );
     } );
-    node.once( "slave", function() {
-      assert.fail( "should not be a slave" );
-      done();
-    } );
-    node.once( "master", function() {
-      assert( node.isMaster );
-      setTimeout( done, 3 );
-    } );
-    node.heartbeat();
-    node.elect();
-    node.votes++;
-  } );
 
-  it( "becomes slave if told to before it starts an election", function( done ) {
-    node.heartbeatTimeout = 1000;
-    node.once( "elect", function() {
-      //assert.fail( "should never get to an election" );
+    afterEach( function() {
+      allNodes.forEach( function( n ) { n.removeAllListeners(); } );
     } );
-    node.once( "slave", function() {
-      assert( node.isSlave );
-      setTimeout( done, 3 );
-    } );
-    node.once( "master", function() {
-      assert.fail( "should not be a master" );
-      done();
-    } );
-    node.heartbeat();
-    node.elect();
-    node.isSlave = true;
-  } );
 
-  it( "immediately becomes a slave if set as a slave", function( done ) {
-    var electSpy = sinon.spy();
-    node.once( "elect", function() { electSpy(); node.votes++; node.isSlave = true; } );
-    node.once( "slave", function() {
-      assert( electSpy.called );
-      assert( node.isSlave );
-      setTimeout( done, 2 ); // wait to ensure master isn't set
-    } );
-    node.once( "master", function() {
-      assert.fail( "should not be a master" );
-      done();
-    } );
-    node.heartbeat();
-    node.elect();
-  } );
+    it( "elects nodeC as master when all nodes come up at the same time", function( done ) {
+      allNodes.forEach( function( n ) { n.heartbeat(); } );
 
-  it( "does not become master after it is set as a slave", function( done ) {
-    var electSpy = sinon.spy();
-    node.once( "elect", function() { electSpy(); node.votes++; node.isSlave = true; node.votes++; } );
-    node.once( "slave", function() {
-      assert( electSpy.called );
-      assert( node.isSlave );
-      setTimeout( done, 2 ); // wait to ensure master isn't set
+      setTimeout( function() {
+        assert.equal( nodeA.role, 'slave' );
+        assert.equal( nodeB.role, 'slave' );
+        assert.equal( nodeC.role, 'master' );
+
+        done();
+      }, 10 );
     } );
-    node.once( "master", function() {
-      assert.fail( "should not be a master" );
-      done();
+
+    it ( "elects nodeC as master when one node comes up first", function( done ) {
+      nodeA.heartbeat();
+
+      setTimeout( function() {
+        assert.equal( nodeA.role, 'slave' );
+        assert.equal( nodeB.role, 'slave' );
+        assert.equal( nodeC.role, 'master' );
+
+        done();
+      }, 10 );
     } );
-    node.heartbeat();
-    node.elect();
+
+    it( "keeps nodeB as master when one comes up later", function( done ) {
+      allNodes.splice( allNodes.indexOf( nodeC ), 1 );
+      nodeA.heartbeat();
+      nodeB.heartbeat();
+
+      setTimeout( function() {
+        assert.equal( nodeA.role, 'slave' );
+        assert.equal( nodeB.role, 'master' );
+        assert.equal( nodeC.role, 'indeterminate' );
+
+        nodeC.heartbeat();
+        nodeC.isSlave = true;
+
+        assert.equal( nodeA.role, 'slave' );
+        assert.equal( nodeB.role, 'master' );
+        assert.equal( nodeC.role, 'slave' );
+
+        done();
+      }, 10 );
+    } );
   } );
 
 } );
+
+function shuffleArray(array) {
+    for (var i = array.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+    }
+    return array;
+}
+

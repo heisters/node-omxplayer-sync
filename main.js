@@ -66,27 +66,25 @@ node.on( "master", function() {
 } );
 node.on( "slave", function() { logger.info( "imma slave!" ); } );
 
-node.on( "elect", function( id ) {
-  logger.info( "send elect " + id );
+node.on( "elect", function( nid, eid ) {
+  logger.info( "send elect " + nid );
   osc.send( {
     address: "/elect",
-    args: [ { type: 's', value: id } ]
+    args: [ { type: 's', value: nid }, { type: 's', value: eid } ]
   } );
 } );
 
 bus.on( "ready", function() {
   osc.on( "/elect", function( args ) {
-    var otherId = args[ 0 ];
+    var otherNid = args[ 0 ];
+    var eid = args[ 1 ];
+    var result = node.vote( otherNid, eid );
 
-    if ( ! node.isElecting ) node.elect();
-
-    if ( node.id > otherId ) {
-      logger.info( "got elect " + otherId + ", incrementing votes" );
-      node.votes++;
-    } else if ( node.id < otherId ) {
-      logger.info( "got elect " + otherId + ", becoming slave" );
-      node.isSlave = true;
-    } // else my own id
+    if ( result === ClusterNode.VOTE_RESULT.MASTER ) {
+      logger.info( "got elect " + otherNid + ", incrementing votes" );
+    } else if ( result === ClusterNode.VOTE_RESULT.SLAVE ) {
+      logger.info( "got elect " + otherNid + ", becoming slave" );
+    }
   } );
 } );
 
@@ -127,18 +125,18 @@ osc.on( "/status", function( args ) {
 dns.lookupIP( function( ipv4, ipv6, hostname ) {
   setInterval( function() {
     var status = {
-        nid: node.id
+        nid: node.nid
       , hostname: hostname
       , ipv4: ipv4
       , ipv6: ipv6
-      , role: node.isMaster ? "master" : ( node.isSlave ? "slave" : "indeterminate" )
+      , role: node.role
       , sync: controller.masterSync
     };
 
 
     osc.send( {
       address: "/status",
-      args: [ { type: 's', value: node.id }, { type: 's', value: JSON.stringify( status ) } ]
+      args: [ { type: 's', value: node.nid }, { type: 's', value: JSON.stringify( status ) } ]
     } );
   }, config.statusIntervalMs );
 } );
