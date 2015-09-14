@@ -16,12 +16,35 @@
           <tr class="ipv4"><th>IP (v4)</th><td><%= status.ipv4 %></td></tr>
           <tr class="ipv6"><th>IP (v6)</th><td><%= status.ipv6 %></td></tr>
           <tr class="last-seen"><th>Last seen</th><td><span class="time"><%= time - status.lastSeen %></span>ms ago</td></tr>
-          <tr class="sync"><th>Sync position</th><td><%= status.sync.position.toFixed( 2 ) %></td></tr>
+          <tr class="sync"><th>Sync position</th><td><%= status.role === 'master' ? 'n/a' : status.sync.position.toFixed( 2 ) %></td></tr>
         </table>
       </div>
     </script>
     <div id="statuses">
     </div>
+  </section>
+
+  <section>
+    <h2>Commands</h2>
+    <button class="command" data-command="refresh">
+      <span class="icon-container"><i class="fa fa-rotate-right"></i></span>
+      <label>Refresh</label>
+    </button>
+
+    <button class="command" data-command="stop">
+      <span class="icon-container dangerous"><i class="fa fa-stop"></i></span>
+      <label>Stop</label>
+    </button>
+
+    <button class="command" data-command="restart">
+      <span class="icon-container"><i class="fa fa-refresh"></i></span>
+      <label>Restart</label>
+    </button>
+
+    <button class="command dangerous" data-command="halt">
+      <span class="icon-container"><i class="fa fa-power-off"></i></span>
+      <label>Halt</label>
+    </button>
   </section>
 
 </body>

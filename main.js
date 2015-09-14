@@ -1,4 +1,6 @@
 var omx = require('omxdirector')
+  , child_process = require('child_process')
+  , process = require('process')
   , logger = require('./src/logger')
   , PlayerController = require('./src/player-controller')
   , OSCController = require('./src/osc-controller')
@@ -139,6 +141,39 @@ dns.lookupIP( function( ipv4, ipv6, hostname ) {
       args: [ { type: 's', value: node.nid }, { type: 's', value: JSON.stringify( status ) } ]
     } );
   }, config.statusIntervalMs );
+} );
+
+web.on( "command", function( command ) {
+  osc.send( {
+    address: "/command/" + command,
+  } );
+} );
+
+// Listen for explicit messages, so there's no opportunity for injection
+osc.on( "/command/refresh", function() {
+  logger.warn( "restarting process in response to refresh command" );
+  process.exit(); // should be caught by forever
+} );
+
+osc.on( "/command/stop", function() {
+  logger.warn( "stopping process in response to stop command" );
+  child_process.exec("sudo /usr/sbin/service video-player stop", function( error, stdout, stderr ) {
+    logger.info( "stop result", { error: error, stdout: stdout, stderr: stderr } );
+  } );
+} );
+
+osc.on( "/command/restart", function() {
+  logger.warn( "rebooting system in response to restart command" );
+  child_process.exec("sudo /sbin/reboot", function( error, stdout, stderr ) {
+    logger.info( "reboot result", { error: error, stdout: stdout, stderr: stderr } );
+  } );
+} );
+
+osc.on( "/command/halt", function() {
+  logger.warn( "halting system in response to halt command" );
+  child_process.exec("sudo /sbin/halt", function( error, stdout, stderr ) {
+    logger.info( "halt result", { error: error, stdout: stdout, stderr: stderr } );
+  } );
 } );
 
 ////////////////////////////////////////////////////////////////////////////////

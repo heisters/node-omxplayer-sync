@@ -67,4 +67,14 @@ function onDOMReady() {
       } ) ).appendTo( $container );
     }
   } );
+
+  $( 'body' ).on( "click", "button.command", function() {
+    $this = $( this );
+    var command = $this.data( "command" );
+    var message = "Are you sure you want to " + command + " all players?";
+    if ( $this.is( ".dangerous" ) ) message += " This may require manual intervention to get all players running again.";
+    if ( confirm( message ) ) {
+      socket.emit( "command", { command: command } );
+    }
+  } );
 }

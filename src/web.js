@@ -56,7 +56,9 @@ Object.defineProperties( Web.prototype, {
     }.bind( this ) );
 
     this.io = socketio( this.server );
-    //this.io.on( 'connection', function( socket ) { } );
+    this.io.on( 'connection', function( socket ) {
+      socket.on( 'command', this.onCommand.bind( this ) );
+    }.bind( this ) );
 
   } },
 
@@ -64,6 +66,10 @@ Object.defineProperties( Web.prototype, {
     var s = merge( status, { lastSeen: Date.now() } );
     this.nodes[ nid ] = s;
     this.updateClientStatus();
+  } },
+
+  onCommand: { value: function( data ) {
+    this.emit( "command", data.command );
   } },
 
   updateClientStatus: { value: function() {
