@@ -1,6 +1,5 @@
 var omx = require('omxdirector')
   , child_process = require('child_process')
-  , process = require('process')
   , logger = require('./src/logger')
   , PlayerController = require('./src/player-controller')
   , OSCController = require('./src/osc-controller')
