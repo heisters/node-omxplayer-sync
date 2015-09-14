@@ -86,20 +86,16 @@ Object.defineProperties( ClusterNode.prototype, {
       this.isSlave = true;
     } // else my own id
 
-    console.log( this.nid, otherNid, result );
     return result;
   } },
 
   waitToBecomeMaster: { value: function( eid ) {
-    if ( this.electionIsResolved( eid ) ) console.log( 'election resolved' );
     if ( this.electionIsResolved( eid ) ) return;
 
     if ( this.__votingTimeout ) this.timer.clearTimeout( this.__votingTimeout );
     this.__votingTimeout = this.timer.setTimeout( function() {
-      if ( this.electionIsResolved( eid ) ) console.log( 'election resolved' );
       if ( this.electionIsResolved( eid ) ) return;
 
-      console.log( 'vt expired, setting master %s', this.nid );
       this.resolveElection( eid );
       this.isMaster = true;
     }.bind( this ), this.votingTimeout );
