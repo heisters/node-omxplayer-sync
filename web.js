@@ -13,7 +13,7 @@ var osc = new OSCController( new Clock(), {
 } );
 osc.open();
 
-var web = new Web( { port: 8080 /*, serviceName: 'cluster' */ } );
+var web = new Web( { port: config.webPort /*, serviceName: 'cluster' */ } );
 web.listen();
 
 osc.on( "/status", function( args ) {
