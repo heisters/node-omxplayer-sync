@@ -24,6 +24,14 @@ section:last-child {
   margin-bottom: 0;
 }
 
+canvas {
+  width: 100%;
+}
+
+canvas#deltas {
+  height: 150px;
+}
+
 a, a:visited {
   color: inherit;
   text-decoration: none;

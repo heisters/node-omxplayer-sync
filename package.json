@@ -15,6 +15,7 @@
     "debug": "^2.2.0",
     "express": "^4.13.3",
     "font-awesome": "^4.4.0",
+    "husl": "^6.0.1",
     "jquery": "^2.1.4",
     "merge": "^1.2.0",
     "multicast-dns": "^3.0.0",

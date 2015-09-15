@@ -1,6 +1,7 @@
 var $ = require('jquery')
   , socket = require('socket.io-client')()
   , css = require('../css/index.css')
+  , HUSL = require('husl')
 ;
 
 // Simple JavaScript Templating
@@ -69,10 +70,10 @@ function onDOMReady() {
       } ) ).appendTo( $container );
 
       deltaData[ i ] = deltaData[ i ] || [];
-      deltaData[ i ].push( nstatus.delta );
+      deltaData[ i ].push( nstatus.delta === undefined ? 0 : nstatus.delta );
     }
 
-    updateDeltas( deltaData );
+    updateDeltas( deltaData, ordered );
   } );
 
   $( 'body' ).on( "click", "button.command", function() {
@@ -86,36 +87,89 @@ function onDOMReady() {
   } );
 }
 
-function updateDeltas( data ) {
+function updateDeltas( data, orderedStatuses ) {
   var $deltas = $("#deltas")
     , ctx = $deltas[0].getContext( '2d' )
     , w = $deltas.width()
     , h = $deltas.height()
-    , px = ctx.createImageData( 1, 1 )
-    , pxData = px.data
+    , margin = 20
   ;
+  ctx.canvas.width = w;
+  ctx.canvas.height = h;
+  ctx.font = "12px Roboto";
 
   for ( var i in data ) while( data[ i ].length > w ) data[ i ].shift();
 
-  ctx.clearRect( 0, 0, w, h );
+  var sum = 0, count = 0, sqrDiffSum = 0;
   for ( var i in data ) {
-    var d = data[ i ];
-    for ( var j in d ) {
-      var delta = d[ j ];
+    for ( var j in data[ i ] ) {
+      var delta = data[ i ][ j ];
+      if ( delta === undefined ) continue;
+
+      sum += delta;
+      count++;
+    }
+  }
+  var avg = sum / count;
+
+  for ( var i in data ) {
+    for ( var j in data[ i ] ) {
+      var delta = data[ i ][ j ];
+      if ( delta === undefined ) continue;
+
+      var diff = delta - avg;
+      sqrDiffSum += diff * diff;
+    }
+  }
+  var avgSqrDiff = sqrDiffSum / count;
+  var stdDev = Math.sqrt( avgSqrDiff );
+  var range = stdDev * 3;
+
+
+  ctx.clearRect( 0, 0, w, h );
+
+  ctx.strokeStyle = "#CCCCCC";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo( 0, margin );
+  ctx.lineTo( w, margin );
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo( 0, h - margin );
+  ctx.lineTo( w, h - margin );
+  ctx.stroke();
+
+  ctx.fillStyle = "#333";
+  ctx.textBaseline = "bottom";
+  ctx.fillText( range.toFixed( 5 ) + " secs", 0 , margin );
+  ctx.textBaseline = "hanging";
+  ctx.fillText( (-range).toFixed( 5 ) + " secs", 0 , h - margin + 3 );
+
+  var labelsX = w;
+  for ( var i in data ) {
+    var rgb = HUSL.toRGB( 360 / data.length * i, 100, 50 )
+      , a = 0.5
+      , fillStyle = "rgba(" + rgb.map( function(x) { return (Math.max( x, 0 ) * 255).toFixed( 0 ); } ).concat( a ).join( ',' ) + ")"
+
+    ctx.fillStyle = fillStyle
+
+    var name = orderedStatuses[ i ].hostname, strw = ctx.measureText( name ).width;
+    labelsX -= strw + (i === "0" ? 0 : 10);
+    ctx.textBaseline = "bottom";
+    ctx.fillText( name, labelsX, margin );
+
+
+    for ( var j in data[ i ] ) {
+      var delta = data[ i ][ j ];
+      if ( delta === undefined ) continue;
 
       var x = w - j
-        , y = Math.floor( delta * h * 0.5 + h * 0.5 )
-        , r = 0 * 255
-        , g = 0 * 255
-        , b = 0 * 255
-        , a = 0.5
+        , yScale = 0.5 * ( h - margin * 2 )
+        , y = Math.floor( delta / range * yScale + ( yScale + margin ) )
       ;
 
-      pxData[0] = r;
-      pxData[1] = g;
-      pxData[2] = b;
-      pxData[3] = a;
-      ctx.putImageData( px, x, y );
+      ctx.fillRect( x, y, 1, 1 );
     }
   }
 }
