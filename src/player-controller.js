@@ -170,6 +170,10 @@ Object.defineProperties( PlayerController.prototype, {
     return { time: this.master.avgs.time, position: this.master.avgs.seconds };
   } },
 
+  delta: { get: function() {
+    return this._lastDelta;
+  } },
+
   seekToMaster: { value: function() {
     if ( this.waiting || ! this.localValid || ! this.masterValid ) return;
 
@@ -180,6 +184,7 @@ Object.defineProperties( PlayerController.prototype, {
       , delta           = localPosition - masterPosition
       , absDelta        = Math.abs( delta );
 
+    this._lastDelta = delta / duration; // normalized
 
     this.logger.debug( "sync", {
       now: now,

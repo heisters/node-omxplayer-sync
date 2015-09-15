@@ -41,10 +41,12 @@ var T = (function(){
 
 $( onDOMReady );
 
+
 function onDOMReady() {
   var templates = {
     status: T("status-template")
   };
+  var deltaData = [];
 
   socket.on( 'status', function ( status ) {
     var $container = $( "#statuses" ).empty();
@@ -65,7 +67,12 @@ function onDOMReady() {
             return window.location.href.replace( new RegExp( window.location.hostname, 'g' ), host );
           }
       } ) ).appendTo( $container );
+
+      deltaData[ i ] = deltaData[ i ] || [];
+      deltaData[ i ].push( nstatus.delta );
     }
+
+    updateDeltas( deltaData );
   } );
 
   $( 'body' ).on( "click", "button.command", function() {
@@ -77,4 +84,38 @@ function onDOMReady() {
       socket.emit( "command", { command: command } );
     }
   } );
+}
+
+function updateDeltas( data ) {
+  var $deltas = $("#deltas")
+    , ctx = $deltas[0].getContext( '2d' )
+    , w = $deltas.width()
+    , h = $deltas.height()
+    , px = ctx.createImageData( 1, 1 )
+    , pxData = px.data
+  ;
+
+  for ( var i in data ) while( data[ i ].length > w ) data[ i ].shift();
+
+  ctx.clearRect( 0, 0, w, h );
+  for ( var i in data ) {
+    var d = data[ i ];
+    for ( var j in d ) {
+      var delta = d[ j ];
+
+      var x = w - j
+        , y = Math.floor( delta * h * 0.5 + h * 0.5 )
+        , r = 0 * 255
+        , g = 0 * 255
+        , b = 0 * 255
+        , a = 0.5
+      ;
+
+      pxData[0] = r;
+      pxData[1] = g;
+      pxData[2] = b;
+      pxData[3] = a;
+      ctx.putImageData( px, x, y );
+    }
+  }
 }

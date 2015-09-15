@@ -132,6 +132,7 @@ dns.lookupIP( function( ipv4, ipv6, hostname ) {
       , ipv6: ipv6
       , role: node.role
       , sync: controller.masterSync
+      , delta: controller.delta
     };
 
 
