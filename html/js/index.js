@@ -164,7 +164,7 @@ function updateDeltas( data, orderedStatuses ) {
       var delta = data[ i ][ j ];
       if ( delta === undefined ) continue;
 
-      var x = w - j
+      var x = j
         , yScale = 0.5 * ( h - margin * 2 )
         , y = Math.floor( delta / range * yScale + ( yScale + margin ) )
       ;
