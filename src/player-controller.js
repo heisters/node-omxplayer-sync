@@ -184,7 +184,7 @@ Object.defineProperties( PlayerController.prototype, {
       , delta           = localPosition - masterPosition
       , absDelta        = Math.abs( delta );
 
-    this._lastDelta = delta / duration; // normalized
+    this._lastDelta = delta;
 
     this.logger.debug( "sync", {
       now: now,
