@@ -60,12 +60,10 @@ web.listen();
 ////////////////////////////////////////////////////////////////////////////////
 // Node Transport
 
-var needToDoSynchronizedJump = false;
 node.on( "master", function() {
   controller.reset();
   controller.play();
   logger.info( "imma master!" );
-  needToDoSynchronizedJump = true;
 } );
 node.on( "slave", function() { logger.info( "imma slave!" ); } );
 
@@ -101,31 +99,6 @@ controller.on( "sync", function( status ) {
     address: "/sync",
     args: [ { type: 'f', value: elapsed }, { type: 't', value: time } ]
   } );
-
-  if ( needToDoSynchronizedJump ) {
-    needToDoSynchronizedJump = false;
-    setTimeout( function() {
-      osc.send( {
-        address: "/synchronized-restart/prep"
-      } );
-      osc.send( {
-        timeTag: osc.timeTag( 1 ),
-        packets: [{
-          address: "/synchronized-restart/go"
-        }]
-      } );
-    }, 500 );
-  }
-} );
-
-osc.on( "/synchronized-restart/prep", function() {
-  controller.reset();
-  controller.pause();
-  controller.setPosition( 0 );
-} );
-
-osc.on( "/synchronized-restart/go", function() {
-  controller.play();
 } );
 
 bus.on( "ready", function() {
