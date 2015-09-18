@@ -66,6 +66,10 @@ describe( "ClusterNode", function() {
         assert.equal( nodeB.role, 'slave' );
         assert.equal( nodeC.role, 'master' );
 
+        assert( ! nodeA.isElecting );
+        assert( ! nodeB.isElecting );
+        assert( ! nodeC.isElecting );
+
         done();
       }, 10 );
     } );

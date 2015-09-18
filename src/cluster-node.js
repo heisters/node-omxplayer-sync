@@ -75,6 +75,7 @@ Object.defineProperties( ClusterNode.prototype, {
   vote: { value: function( otherNid, eid ) {
     var result = ClusterNode.VOTE_RESULT.NONE;
 
+    if ( this.electionIsResolved( eid ) ) return;
     if ( this.electionIsUnknown( eid ) ) this.startElection( eid );
 
     if ( this.nid > otherNid ) {
@@ -122,6 +123,8 @@ Object.defineProperties( ClusterNode.prototype, {
       this.emit( "slave" );
     }
   },
+
+  isElecting: { get: function() { return !!( this.__electTimeout || this.__votingTimeout ); } },
 
   role: { get: function() {
     return this.isMaster ? "master" : ( this.isSlave ? "slave" : "indeterminate" );
