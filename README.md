@@ -17,19 +17,6 @@ peer-to-peer protocol to figure out how to stay in sync. You can remove
 and add Pis while the cluster is running, and they will quickly fall
 into sync with the other Pis.
 
-Technical Overview
-------------------
-
-The control software is written in Node.js, uses OMXPlayer to play the
-video, and OSC to talk over the network. The controller uses a
-dumbed-down consensus algorithm to elect a peer as master, which all the
-other Pis become slaves to, syncing their video by seeking, pausing, and
-slightly tweaking their play speed.
-
-To make management of the cluster easier, there is a [system automation
-tool](https://github.com/heistes/node-omxplayer-sync-devops) that uses
-Ansible to provision, deploy, and configure many Pis at the same time.
-
 Setup
 -----
 
@@ -38,8 +25,8 @@ Setup
 2. Copy your video file to the pi.
 3. Start the service using `node main.js` or use ansible.
 
-Notes
------
+Video Format
+------------
 
 Video files should not be temporally compressed (eg. MJPEG or Apple
 PRORES), or they should have a very low GOP length (the interval between
@@ -65,3 +52,34 @@ An example `config.local.js` file:
       toleranceSecs: 1 / FPS * 3,
       smoothingWindowMs: 1e3 / FPS * 15
     };
+
+Management
+----------
+
+Once the pis are running, you can access a control panel by opening a
+web browser and navigating to any of the pis using their hostnames or
+ips. For example, [http://player-1.local](http://player-1.local) or
+[http://10.0.0.2](http://10.0.0.2).
+
+The control panel will show you the status of the pis and allow you to
+perform the following actions:
+
+* Refresh: quickly restart all the players' software
+* Stop: stop the software. There will be no way to restart it without
+  logging into the players using SSH or a terminal.
+* Restart: reboot all the players' hardware.
+* Halt: turn off all the players' hardware. You will need to power cycle
+  the players to get them to restart.
+
+Technical Overview
+------------------
+
+The control software is written in Node.js, uses OMXPlayer to play the
+video, and OSC to talk over the network. The controller uses a
+dumbed-down consensus algorithm to elect a peer as master, which all the
+other Pis become slaves to, syncing their video by seeking, pausing, and
+slightly tweaking their play speed.
+
+To make management of the cluster easier, there is a [system automation
+tool](https://github.com/heistes/node-omxplayer-sync-devops) that uses
+Ansible to provision, deploy, and configure many Pis at the same time.
