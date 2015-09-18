@@ -123,7 +123,7 @@ function updateDeltas( data, orderedStatuses ) {
   }
   var avgSqrDiff = sqrDiffSum / count;
   var stdDev = Math.sqrt( avgSqrDiff );
-  var range = stdDev * 3;
+  var range = stdDev * 1.5;
 
 
   ctx.clearRect( 0, 0, w, h );
