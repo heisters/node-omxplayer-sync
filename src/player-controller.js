@@ -140,6 +140,8 @@ Object.defineProperties( PlayerController.prototype, {
   synchronize: { value: function( seconds, time ) {
     if ( ! this.clock.isSynchronized ) this.logger.sync( "clock to master time" );
     this.clock.sync( time ); // doesn't compensate for latency...
+    // FIXME:
+    return;
 
     if ( seconds < this.config.loopDetectionMarginSecs ) {
       this.resetMasterSync();
