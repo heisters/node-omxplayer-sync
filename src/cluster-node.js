@@ -53,6 +53,8 @@ Object.defineProperties( ClusterNode.prototype, {
   startElection: { value: function( eid ) {
     eid = eid || uuid.v4();
 
+    if ( ! this.electionIsUnknown( eid ) ) return;
+
     this.state = NODE_STATE.indeterminate;
     this.unresolveElection( eid );
     this.elect( eid )
