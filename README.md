@@ -26,9 +26,9 @@ dumbed-down consensus algorithm to elect a peer as master, which all the
 other Pis become slaves to, syncing their video by seeking, pausing, and
 slightly tweaking their play speed.
 
-To make management of the cluster easier, there is a system automation
-tool that uses Ansible to provision, deploy, and configure many Pis at
-the same time.
+To make management of the cluster easier, there is a [system automation
+tool](https://github.com/heistes/node-omxplayer-sync-devops) that uses
+Ansible to provision, deploy, and configure many Pis at the same time.
 
 Setup
 -----
@@ -45,3 +45,23 @@ Video files should not be temporally compressed (eg. MJPEG or Apple
 PRORES), or they should have a very low GOP length (the interval between
 i-frames or keyframes). You can use `script/get_keyframe_intervals` to
 inspect the GOP of a file (depends on ffmpeg and ffprobe).
+
+Configuration
+-------------
+
+Default configuration resides in [config.js](config.js). The default
+configuration can be overriden by creating a `config.local.js` file. See
+documentation in [config.js](config.js) for details on each setting. The
+configuration files are JavaScript to allow settings based on
+calculations. This means that you need to be sure your configuration is
+valid JavaScript, or the whole configuration file will be ignored.
+
+An example `config.local.js` file:
+
+    var FPS = 29.97;
+
+    module.exports = {
+      fps: FPS,
+      toleranceSecs: 1 / FPS * 3,
+      smoothingWindowMs: 1e3 / FPS * 15
+    };
