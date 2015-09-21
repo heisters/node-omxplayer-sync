@@ -28,7 +28,7 @@ describe( "DNS", function() {
 
         mdns.once( 'response', function( response ) {
           assert.equal( response.answers.length, 1 );
-          assert.deepEqual( response.answers[0], { type: 'A', name: 'my-service.local', ttl: 300, data: dns.ipv4, class: 1 } );
+          assert.deepEqual( response.answers[0], { type: 'A', name: 'my-service.local', ttl: 30, data: dns.ipv4, class: 1 } );
           done();
         } );
 

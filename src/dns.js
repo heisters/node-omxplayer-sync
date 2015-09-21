@@ -1,4 +1,4 @@
-var mdns = require('multicast-dns')()
+var mdns = require('multicast-dns')
   , dns = require('dns')
   , os = require('os')
   , util = require('util')
@@ -33,13 +33,21 @@ util.inherits( DNS, EventEmitter );
 
 Object.defineProperties( DNS.prototype, {
   listen: { value: function( cb ) {
-    this.lookupIP( function() { this.bindMDNS(); if ( cb ) cb(); }.bind( this ) );
+    this.lookupIP( function() {
+      this.bindMDNS();
+      if ( cb ) cb();
+    }.bind( this ) );
   } },
 
   bindMDNS: { value: function() {
-    mdns.on( "query", function( query ) {
+    this.mdns = mdns();
+    this.mdns.on( "query", function( query ) {
       query.questions.forEach( this.answerQuestion.bind( this ) );
     }.bind( this ) );
+  } },
+
+  close: { value: function() {
+    this.mdns.destroy();
   } },
 
   lookupIP: { value: function( cb ) {
@@ -57,22 +65,22 @@ Object.defineProperties( DNS.prototype, {
     if ( question.type === 'PTR' && question.name === '_http._tcp.local' ) {
       var r = records.PTR.concat( records.SRV );
       debug( 'PTR response: %s', JSON.stringify( r ) );
-      mdns.response( r );
+      this.mdns.response( r );
 
     } else if ( question.type === 'SRV' && question.name === this.serviceName + '._http._tcp.local' ) {
       var r = records.SRV.concat( records.A );
       debug( 'SRV response: %s', JSON.stringify( r ) );
-      mdns.response( r );
+      this.mdns.response( r );
 
     } else if ( question.type === 'A' && question.name === this.serviceName + '.local' && this.ipv4 ) {
       var r =  records.A;
       debug( 'A response: %s', JSON.stringify( r ) );
-      mdns.response( r );
+      this.mdns.response( r );
 
     } else if ( question.type === 'AAAA' && question.name === this.serviceName + '.local' && this.ipv6 ) {
       var r =  records.AAAA;
       debug( 'AAAA response: %s', JSON.stringify( r ) );
-      mdns.response( r );
+      this.mdns.response( r );
 
     }
   } },
@@ -82,14 +90,14 @@ Object.defineProperties( DNS.prototype, {
       A: [{
         type: 'A',
         name: this.serviceName + '.local',
-        ttl: 300,
+        ttl: 30,
         data: this.ipv4
       }],
 
       AAAA: [{
         type: 'AAAA',
         name: this.serviceName + '.local',
-        ttl: 300,
+        ttl: 30,
         data: this.ipv6
       }],
 

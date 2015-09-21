@@ -28,23 +28,37 @@ function Web( options ) {
     res.sendFile( this.dir + '/index.html' );
   }.bind( this ) );
 
-
-  if ( options.serviceName ) {
-    this.dns = new DNS( options.serviceName, options.port );
-  }
-
   this.nodes = {};
 }
 
 util.inherits( Web, EventEmitter );
 
 Object.defineProperties( Web.prototype, {
-  listen: { value: function( cb ) {
-    if ( this.dns ) {
-      this.dns.listen( function() { this.serverListen( cb ); }.bind( this ) );
-    } else {
-      this.serverListen( cb );
+  master: { value: function( cb ) {
+    if ( this.options.serviceName ) {
+      this.dns = new DNS( this.options.serviceName, this.options.port );
+      this.dns.listen( cb );
     }
+  } },
+
+  slave: { value: function() {
+    this.closeDNS();
+  } },
+
+  closeDNS: { value: function() {
+    if ( this.dns ) {
+      this.dns.close();
+      delete this.dns;
+    }
+  } },
+
+  listen: { value: function( cb ) {
+    this.serverListen( cb );
+  } },
+
+  close: { value: function() {
+    this.server.close();
+    this.closeDNS();
   } },
 
   serverListen: { value: function( cb ) {

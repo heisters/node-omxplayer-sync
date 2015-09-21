@@ -54,7 +54,7 @@ node.heartbeat();
 ////////////////////////////////////////////////////////////////////////////////
 // Web Interface
 
-var web = new Web( { port: config.webPort /*, serviceName: 'cluster' */ } );
+var web = new Web( { port: config.webPort, serviceName: config.serviceName } );
 web.listen();
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -63,9 +63,13 @@ web.listen();
 node.on( "master", function() {
   controller.reset();
   controller.play();
+  web.master();
   logger.info( "imma master!" );
 } );
-node.on( "slave", function() { logger.info( "imma slave!" ); } );
+node.on( "slave", function() {
+  logger.info( "imma slave!" );
+  web.slave();
+} );
 
 node.on( "elect", function( nid, eid ) {
   logger.info( "send elect " + nid );

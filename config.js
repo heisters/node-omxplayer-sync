@@ -40,6 +40,9 @@ module.exports = merge( {
   // The filename to play. Probably easiest to leave this the same on every
   // player and just rename your file to match.
   filename: '/home/pi/video.mov',
+  // The hostname the master will be available at on the network. '.local' will
+  // be appended.
+  serviceName: 'players',
 
   // ---------------------------------------------------------------------------
   // Nothing below here should need to be changed.
