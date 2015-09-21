@@ -217,6 +217,7 @@ Object.defineProperties( PlayerController.prototype, {
       this.logger.sync( "wait", delta.toFixed(2) );
 
       this.waiting = true;
+      this.reset();
       this.pauseFor( function() { this.waiting = false; }.bind( this ), delta * 1e3, now );
 
 
@@ -224,6 +225,7 @@ Object.defineProperties( PlayerController.prototype, {
 
       this.logger.sync( "jump", delta.toFixed(2), masterPosition.toFixed(2) );
 
+      this.reset();
       this.setPosition( masterPosition );
 
     }

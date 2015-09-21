@@ -150,7 +150,7 @@ describe( "PlayerController", function() {
 
       controller.seekToMaster();
 
-      assertExactlyPlayMethodsCalled( "pauseFor" );
+      assertExactlyPlayMethodsCalled( "reset", "pauseFor" );
     } );
 
     it( "jumps if it is ahead by more than the jump tolerance", function() {
@@ -159,7 +159,7 @@ describe( "PlayerController", function() {
 
       controller.seekToMaster();
 
-      assertExactlyPlayMethodsCalled( "setPosition" );
+      assertExactlyPlayMethodsCalled( "reset", "setPosition" );
       assert( controller.setPosition.withArgs( 1 ).called );
     } );
 
@@ -169,7 +169,7 @@ describe( "PlayerController", function() {
 
       controller.seekToMaster();
 
-      assertExactlyPlayMethodsCalled( "setPosition" );
+      assertExactlyPlayMethodsCalled( "reset", "setPosition" );
       assert( controller.setPosition.withArgs( 5 ).called );
     } );
 
