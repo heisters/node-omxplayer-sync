@@ -12,8 +12,8 @@ var EventEmitter = require('events').EventEmitter
 browserify.settings( {
   transform: [ [ require( 'browserify-css' ), { // use require to fix issue on Linux
     processRelativeUrl: function( relativeUrl ) {
-      // remove node_modules/<module-name> from the path
-      var regexp = /^node_modules\/(font-awesome)/;
+      // remove node_modules/<module-name> and anything before it from the path
+      var regexp = /.*node_modules\/(font-awesome)/;
 
       if ( ! regexp.test( relativeUrl ) ) return relativeUrl;
       return relativeUrl.replace( regexp, '' );
