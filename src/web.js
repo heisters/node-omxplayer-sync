@@ -7,21 +7,35 @@ var EventEmitter = require('events').EventEmitter
   , browserify = require('browserify-middleware')
   , DNS = require('./dns')
   , debug = require('debug')('web')
-  , browserifyCSS = require('browserify-css')
 ;
 
 browserify.settings( {
-  transform: [ browserifyCSS ]
+  transform: [ [ 'browserify-css', {
+    processRelativeUrl: function( relativeUrl ) {
+      // remove node_modules/<module-name> from the path
+      var regexp = /^node_modules\/(font-awesome)/;
+
+      if ( ! regexp.test( relativeUrl ) ) return relativeUrl;
+      return relativeUrl.replace( regexp, '' );
+    }
+  } ] ]
 } );
+
+function stripQueryStringAndHashFromPath (url) {
+  return url.split('?')[0].split('#')[0];
+}
 
 function Web( options ) {
   EventEmitter.call( this );
   this.options = options;
   this.app = express();
   this.dir = path.resolve( __dirname + '/../html' );
+  var modules = path.resolve( __dirname + '/../node_modules' );
 
   this.app.use( '/js', browserify( this.dir + '/js' ) );
   this.app.use( express.static( this.dir ) );
+  // whitelist, directory structure hidden
+  this.app.use( '/fonts', express.static( modules + '/font-awesome/fonts' ) );
 
   this.app.get( '/', function( req, res ) {
     debug( 'GET /: OK' );
