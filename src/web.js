@@ -10,7 +10,7 @@ var EventEmitter = require('events').EventEmitter
 ;
 
 browserify.settings( {
-  transform: [ [ 'browserify-css', {
+  transform: [ [ require( 'browserify-css' ), { // use require to fix issue on Linux
     processRelativeUrl: function( relativeUrl ) {
       // remove node_modules/<module-name> from the path
       var regexp = /^node_modules\/(font-awesome)/;
