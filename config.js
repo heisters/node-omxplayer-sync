@@ -14,18 +14,10 @@ module.exports = merge( {
   // the latency of the network the pis are on. The default is to tolerate one
   // frame of difference.
   toleranceSecs: 1 / FPS,
-  // When players are out of sync by more than this many seconds, the software
-  // will jump or pause to sync up, instead of trying to speed up or slow down
-  // to get synchronized.
+  // When players are out of sync by less than this many seconds, the software
+  // will try to sync by speeding up and slowing down. More than this, and it
+  // will jump.
   fineTuneToleranceSecs: 1,
-  // Do not try jumping if the sync is off by less than this. This is partially
-  // dependent on the seek resolution of your video, ie. how frequent its
-  // keyframes are. With infrequent keyframes, jumping can just make sync worse
-  // because the software can't accurately jump to the right position. With
-  // keyframes that are very frequent (say, every frame, or every other frame)
-  // it can be safe to have this pretty low, but it may cause some choppiness
-  // when syncing.
-  jumpToleranceSecs: 10,
   // The sync signal is averaged over this many milliseconds in order to filter
   // out irregularities caused by the network. Higher values will make playback
   // smoother, but less accurately synced.

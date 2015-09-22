@@ -18,7 +18,6 @@ function PlayerController( bus, clock, omx, logger, config ) {
   this.sync = { seconds: -1, time: -1 };
   this.speed = 0;
   this.clock = clock;
-  this.waiting = false;
   this.resetMasterSync();
   this.on( "sync", this.seekToMaster.bind( this ) );
 }
@@ -50,21 +49,6 @@ Object.defineProperties( PlayerController.prototype, {
 
   pause: { value: function( cb ) {
     this.invokeOMXDbus( 'player', { member: 'Pause' }, cb );
-  } },
-
-  pauseFor: { value: function( cb, ms, then ) {
-    this.pause( function( err ) {
-      if ( err ) {
-        cb( err );
-
-      } else {
-        var waitFor = ms - ( this.clock.now() - then );
-        setTimeout( function() {
-          this.play();
-          cb();
-        }.bind( this ), waitFor );
-      }
-    }.bind( this ) );
   } },
 
   play: { value: function( cb ) {
@@ -175,7 +159,7 @@ Object.defineProperties( PlayerController.prototype, {
   } },
 
   seekToMaster: { value: function() {
-    if ( this.waiting || ! this.localValid || ! this.masterValid ) return;
+    if ( ! this.localValid || ! this.masterValid ) return;
 
     var now             = this.clock.now()
       , duration        = this.sync.duration
@@ -210,15 +194,6 @@ Object.defineProperties( PlayerController.prototype, {
 
       if      ( delta > 0 && this.speed >= 0 ) this.slower()
       else if ( delta < 0 && this.speed <= 0 ) this.faster();
-
-
-    } else if ( delta > 0 && absDelta < this.config.jumpToleranceSecs ) {
-
-      this.logger.sync( "wait", delta.toFixed(2) );
-
-      this.waiting = true;
-      this.reset();
-      this.pauseFor( function() { this.waiting = false; }.bind( this ), delta * 1e3, now );
 
 
     } else {

@@ -88,7 +88,7 @@ describe( "PlayerController", function() {
     var now
     ;
 
-    var playMethods = [ "reset", "slower", "faster", "pauseFor", "setPosition" ];
+    var playMethods = [ "reset", "slower", "faster", "setPosition" ];
     var assertExactlyPlayMethodsCalled = function() {
       var called = Array.prototype.slice.call( arguments );
       var notCalled = playMethods.filter( function( p ) { return called.indexOf( p ) === -1; } );
@@ -101,7 +101,6 @@ describe( "PlayerController", function() {
       controller.config.toleranceSecs = 0.01;
       controller.config.loopDetectionMarginSecs = 1;
       controller.config.fineTuneToleranceSecs = 0.1;
-      controller.config.jumpToleranceSecs = 2;
 
       now = 0;
       controller.clock.now = function() { return now; };
@@ -142,15 +141,6 @@ describe( "PlayerController", function() {
       controller.seekToMaster();
 
       assertExactlyPlayMethodsCalled( "slower" );
-    } );
-
-    it( "waits if it is ahead by less than the jump tolerance", function() {
-      controller.updateSync( 10 /* duration */, 3 /* position */, now );
-      controller.synchronize( 1.1 /* position */, now );
-
-      controller.seekToMaster();
-
-      assertExactlyPlayMethodsCalled( "reset", "pauseFor" );
     } );
 
     it( "jumps if it is ahead by more than the jump tolerance", function() {
