@@ -59,7 +59,9 @@ Management
 Once the pis are running, you can access a control panel by opening a
 web browser and navigating to any of the pis using their hostnames or
 ips. For example, [http://player-1.local](http://player-1.local) or
-[http://10.0.0.2](http://10.0.0.2).
+[http://10.0.0.2](http://10.0.0.2). You can also try navigating to
+[http://players.local](http://players.local), which should take you to
+whichever player is currently the master.
 
 The control panel will show you the status of the pis and allow you to
 perform the following actions:
