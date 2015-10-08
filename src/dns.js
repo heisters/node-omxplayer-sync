@@ -47,7 +47,7 @@ Object.defineProperties( DNS.prototype, {
   } },
 
   close: { value: function() {
-    this.mdns.destroy();
+    if ( this.mdns ) this.mdns.destroy();
   } },
 
   lookupIP: { value: function( cb ) {
