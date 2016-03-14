@@ -83,5 +83,5 @@ other Pis become slaves to, syncing their video by seeking, pausing, and
 slightly tweaking their play speed.
 
 To make management of the cluster easier, there is a [system automation
-tool](https://github.com/heistes/node-omxplayer-sync-devops) that uses
+tool](https://github.com/heisters/node-omxplayer-sync-devops) that uses
 Ansible to provision, deploy, and configure many Pis at the same time.
